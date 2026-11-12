@@ -1,0 +1,17 @@
+{
+  "short_name": "VisionBridge",
+  "name": "VisionBridge Screening Platform",
+  "icons": [
+    {
+      "src": "/visionbridge-logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0A2540",
+  "theme_color": "#0A2540",
+  "display": "standalone",
+  "orientation": "portrait"
+}
+

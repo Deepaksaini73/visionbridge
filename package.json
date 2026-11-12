@@ -1,0 +1,23 @@
+{
+  "name": "visionbridge-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Voice-First, AI-Assisted Preliminary Vision-Screening and Optometrist-Connect Platform",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev:server": "npm --workspace=server run dev",
+    "dev:client": "npm --workspace=client run dev -- --host 0.0.0.0",
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"blue,teal\" \"npm run dev:server\" \"npm run dev:client\"",
+    "build:server": "npm --workspace=server run build",
+    "build:client": "npm --workspace=client run build",
+    "build": "npm run build:server && npm run build:client",
+    "typecheck": "npm --workspace=server run typecheck && npm --workspace=client run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
+
