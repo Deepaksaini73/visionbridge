@@ -108,6 +108,15 @@ export const CustomerProfilePage: React.FC = () => {
     fetchCustomerDetails();
   }, [id]);
 
+  useEffect(() => {
+    if (showEditModal) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showEditModal]);
+
   const handleUpdateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customer) return;
@@ -703,7 +712,7 @@ export const CustomerProfilePage: React.FC = () => {
 
       {/* Edit Customer Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
           <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-healthcare-lg overflow-hidden my-8">
             <div className="p-5 sm:p-6 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
               <div>

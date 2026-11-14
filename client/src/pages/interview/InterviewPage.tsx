@@ -469,8 +469,8 @@ export const InterviewPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50/70 pb-16">
       
-      {/* 1. TOP HEADER BAR */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+      {/* 1. TOP HEADER BAR (Sticky below main navigation) */}
+      <div className="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-16 z-30 shadow-2xs">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           
           {/* Back & Customer Summary */}
@@ -547,7 +547,7 @@ export const InterviewPage: React.FC = () => {
             style={{ width: `${progressPercent}%` }}
           />
         </div>
-      </header>
+      </div>
 
       {/* Save Success Alert Banner */}
       {saveSuccessMessage && (
@@ -859,7 +859,7 @@ export const InterviewPage: React.FC = () => {
 
       {/* 5. EXIT CONFIRMATION MODAL */}
       {showExitConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/50 backdrop-blur-xs animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy-950/50 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 border border-slate-200 shadow-healthcare-lg space-y-4">
             <h3 className="font-bold text-navy-950 text-base">Exit Interview Session?</h3>
             <p className="text-xs text-slate-600 leading-relaxed">
@@ -890,7 +890,7 @@ export const InterviewPage: React.FC = () => {
 
       {/* 6. INTERVIEW COMPLETION & STRUCTURED SUMMARY MODAL */}
       {showSummaryModal && completedSummary && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-xs overflow-y-auto animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-xs overflow-y-auto animate-fade-in">
           <div className="bg-white rounded-3xl max-w-2xl w-full border border-slate-200 shadow-healthcare-lg overflow-hidden my-8">
             
             {/* Modal Header */}

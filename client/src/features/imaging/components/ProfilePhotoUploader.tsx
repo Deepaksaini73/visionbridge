@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Trash2, User, Loader2, Check, AlertCircle } from 'lucide-react';
 import { imagingApi, getAuthenticatedMediaUrl } from '../services/imagingApi';
 
@@ -44,6 +44,17 @@ export const ProfilePhotoUploader: React.FC<ProfilePhotoUploaderProps> = ({
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
+
+  useEffect(() => {
+    if (showConfirmModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showConfirmModal]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setErrorMessage(null);
@@ -184,7 +195,7 @@ export const ProfilePhotoUploader: React.FC<ProfilePhotoUploaderProps> = ({
 
       {/* Preview Confirmation Modal */}
       {showConfirmModal && previewDataUrl && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[105] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-xl border border-slate-200 text-center animate-fade-in">
             <h3 className="text-base font-bold text-slate-800">Confirm Profile Photo</h3>
             <p className="text-xs text-slate-500">

@@ -39,9 +39,9 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 glass-header border-b border-slate-200/80 transition-all duration-200">
+    <header className="sticky top-0 z-40 glass-header border-b border-slate-200/80 transition-all duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-18">
+        <div className="flex items-center justify-between h-16">
           
           {/* Logo & Brand Identity (Inspired by Eye-Sight UI Kit) */}
           <Link to="/" className="flex items-center gap-3 group">
@@ -114,11 +114,11 @@ export const Header: React.FC = () => {
                 to="/optometrist"
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-150 ${
                   location.pathname === '/optometrist'
-                    ? 'bg-white text-navy-950 shadow-2xs font-bold border border-blue-200/50'
+                    ? 'bg-white text-teal-950 shadow-2xs font-bold border border-teal-200/60'
                     : 'text-slate-600 hover:text-navy-950 hover:bg-white/60'
                 }`}
               >
-                <Stethoscope className="w-3.5 h-3.5 text-blue-600" />
+                <Stethoscope className="w-3.5 h-3.5 text-teal-600" />
                 <span>Reviewer Hub</span>
               </Link>
             )}
@@ -129,11 +129,11 @@ export const Header: React.FC = () => {
                 to="/admin"
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all duration-150 ${
                   location.pathname === '/admin'
-                    ? 'bg-navy-950 text-white shadow-2xs font-bold'
+                    ? 'bg-white text-navy-950 shadow-2xs font-bold border border-teal-200/60'
                     : 'text-slate-600 hover:text-navy-950 hover:bg-white/60'
                 }`}
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
+                <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
                 <span>Admin Console</span>
               </Link>
             )}
@@ -390,7 +390,7 @@ export const Header: React.FC = () => {
             <Link
               to="/optometrist"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3.5 py-2.5 rounded-xl text-xs font-semibold text-blue-900 bg-blue-50 border border-blue-200/60"
+              className="block px-3.5 py-2.5 rounded-xl text-xs font-semibold text-teal-900 bg-teal-50 border border-teal-200/60"
             >
               Optometrist Tele-Review Hub
             </Link>

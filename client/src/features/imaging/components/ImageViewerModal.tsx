@@ -93,6 +93,16 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
     setSelectedRecommendations([]);
   }, [currentIndex]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   const currentImage = images[currentIndex];
 
   // Navigation handlers
@@ -212,7 +222,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fadeIn">
       
       {/* Top Bar */}
       <div className="absolute top-0 left-0 right-0 h-16 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between px-6 z-20">

@@ -191,7 +191,7 @@ export const ScreeningSessionSummary: React.FC<ScreeningSessionSummaryProps> = (
 
       {/* Incomplete Modal */}
       {isIncompleteModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[105] bg-black/40 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl">
             <h3 className="text-base font-bold text-slate-800">Mark Screening Incomplete</h3>
             <p className="text-xs text-slate-600">

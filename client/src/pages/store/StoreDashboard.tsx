@@ -86,6 +86,16 @@ export const StoreDashboard: React.FC = () => {
       .catch(() => {});
   }, []);
 
+  // Lock body scroll when register modal is open
+  useEffect(() => {
+    if (showRegisterModal) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showRegisterModal]);
+
   const handleSyncNow = () => {
     setIsSyncing(true);
     setSyncSuccessMsg(null);
@@ -698,7 +708,7 @@ export const StoreDashboard: React.FC = () => {
 
       {/* 5. MODAL: REGISTER NEW PATIENT */}
       {showRegisterModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
           <div className="glass-card bg-white rounded-3xl max-w-lg w-full border border-slate-200/90 shadow-2xl overflow-hidden my-8 animate-slide-up">
             
             {/* Modal Header */}

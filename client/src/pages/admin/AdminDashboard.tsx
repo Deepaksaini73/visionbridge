@@ -18,7 +18,9 @@ import {
   ChevronRight,
   Shield,
   Search,
-  ExternalLink
+  ExternalLink,
+  Check,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/services/api';
@@ -113,6 +115,18 @@ export const AdminDashboard: React.FC = () => {
   });
 
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
+
+  // Lock body scroll when any admin modal is open
+  useEffect(() => {
+    if (showUserModal || showStoreModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showUserModal, showStoreModal]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -248,52 +262,66 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-fade-in">
       
-      {/* 1. ADMIN HEADER */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-navy-950 via-slate-900 to-navy-900 text-white p-6 sm:p-8 rounded-3xl border border-navy-800 shadow-healthcare-lg">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
+      {/* 1. ADMIN HEADER (Unified Glassmorphic Design) */}
+      <div className="glass-card p-6 sm:p-7 rounded-3xl border border-slate-200/90 shadow-glass flex flex-col md:flex-row md:items-center md:justify-between gap-5 relative overflow-hidden">
+        
+        {/* Decorative corner glow */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-teal-200/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-28 w-48 h-48 bg-blue-200/15 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-teal-500/20 text-teal-300 text-xs font-semibold border border-teal-500/30 flex items-center gap-1.5 shadow-xs">
-                <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
-                System Administration & Governance
-              </span>
-              <span className="text-xs text-slate-400 font-mono bg-white/5 px-2.5 py-0.5 rounded-md border border-white/10">
-                Security Policy: Store Isolation
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-display font-bold text-white tracking-tight">
-              VisionBridge Platform Console
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-300 font-normal">
-              Logged in as Administrator: <strong>{user?.name || 'Dr. Vikram Malhotra'}</strong> ({user?.email})
-            </p>
+        <div className="space-y-1.5 relative z-10">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-teal-50 text-teal-800 text-xs font-bold border border-teal-200 shadow-2xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+              <span>Platform Administration & Governance</span>
+            </span>
+            <span className="text-xs font-mono text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+              Multi-Tenant Store Isolation: Enforced
+            </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => setShowUserModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs transition-colors"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>Provision User</span>
-            </button>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-navy-950 font-display">
+            VisionBridge Platform Console
+          </h1>
 
-            <button
-              onClick={() => setShowStoreModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold border border-white/15 shadow-xs transition-colors backdrop-blur-sm"
-            >
-              <Building2 className="w-4 h-4 text-teal-400" />
-              <span>Add Store Center</span>
-            </button>
-          </div>
+          <p className="text-xs sm:text-sm text-slate-500 font-normal">
+            Logged in as Administrator: <strong className="text-slate-800 font-semibold">{user?.name || 'Dr. Vikram Malhotra'}</strong> ({user?.email || 'admin@visionbridge.org'})
+          </p>
+        </div>
+
+        {/* Action Controls */}
+        <div className="flex flex-wrap items-center gap-3 relative z-10">
+          <button
+            onClick={fetchData}
+            disabled={isLoading}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition-all active:scale-95"
+            title="Refresh system data"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isLoading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+
+          <button
+            onClick={() => setShowStoreModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-2xs transition-all active:scale-95"
+          >
+            <Building2 className="w-4 h-4 text-teal-600" />
+            <span>+ Add Optical Center</span>
+          </button>
+
+          <button
+            onClick={() => setShowUserModal(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white text-xs font-bold shadow-healthcare hover:shadow-glow-teal transition-all active:scale-95"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>+ Provision User</span>
+          </button>
         </div>
       </div>
 
       {actionSuccessMsg && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium rounded-2xl flex items-center gap-3 animate-fade-in shadow-xs">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
           <span>{actionSuccessMsg}</span>
         </div>
       )}
@@ -336,7 +364,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* 3. TABS: USERS vs STORES */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-healthcare overflow-hidden">
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-healthcare overflow-hidden">
         
         {/* Tab Headers & Search */}
         <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -345,7 +373,7 @@ export const AdminDashboard: React.FC = () => {
               onClick={() => setActiveTab('USERS')}
               className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${
                 activeTab === 'USERS'
-                  ? 'bg-white text-navy-950 shadow-xs'
+                  ? 'bg-white text-navy-950 shadow-2xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -357,7 +385,7 @@ export const AdminDashboard: React.FC = () => {
               onClick={() => setActiveTab('STORES')}
               className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${
                 activeTab === 'STORES'
-                  ? 'bg-white text-navy-950 shadow-xs'
+                  ? 'bg-white text-navy-950 shadow-2xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -366,14 +394,14 @@ export const AdminDashboard: React.FC = () => {
             </button>
           </div>
 
-          <div className="relative min-w-[220px]">
+          <div className="relative min-w-[240px]">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
-              placeholder={`Search ${activeTab === 'USERS' ? 'users by name/email...' : 'stores by name/code...'}`}
+              placeholder={`Search ${activeTab === 'USERS' ? 'users by name/email/role...' : 'stores by name/code/city...'}`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-teal-500 transition-colors"
+              className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all"
             />
           </div>
         </div>
@@ -384,7 +412,7 @@ export const AdminDashboard: React.FC = () => {
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
+                <thead className="bg-slate-50/80 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
                   <tr>
                     <th className="px-6 py-3.5">Name & Email</th>
                     <th className="px-6 py-3.5">Assigned Role</th>
@@ -397,43 +425,50 @@ export const AdminDashboard: React.FC = () => {
                   {filteredUsers.map((u) => (
                     <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-navy-950 text-sm">{u.name}</div>
-                        <div className="text-[11px] text-slate-400 font-mono">{u.email}</div>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-navy-900 to-teal-800 text-white font-bold flex items-center justify-center text-xs shadow-2xs">
+                            {u.name.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-bold text-navy-950 text-sm">{u.name}</div>
+                            <div className="text-[11px] text-slate-400 font-mono">{u.email}</div>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         {u.role === 'ADMIN' && (
-                          <span className="px-2.5 py-1 rounded-full bg-slate-900 text-white font-semibold text-[10px] shadow-xs">
+                          <span className="px-2.5 py-1 rounded-full bg-navy-950 text-white font-bold text-[10px] shadow-2xs">
                             Administrator
                           </span>
                         )}
                         {u.role === 'OPTOMETRIST' && (
-                          <span className="px-2.5 py-1 rounded-full bg-navy-50 text-navy-950 border border-navy-200 font-semibold text-[10px] shadow-xs">
+                          <span className="px-2.5 py-1 rounded-full bg-teal-50 text-teal-900 border border-teal-200 font-bold text-[10px] shadow-2xs">
                             Optometrist Reviewer
                           </span>
                         )}
                         {u.role === 'STORE_OPERATOR' && (
-                          <span className="px-2.5 py-1 rounded-full bg-teal-50 text-teal-900 border border-teal-200 font-semibold text-[10px] shadow-xs">
+                          <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-200 font-bold text-[10px] shadow-2xs">
                             Store Operator
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-slate-600">
+                      <td className="px-6 py-4 text-slate-600 font-medium">
                         {u.storeName ? (
-                          <span>{u.storeName} ({u.storeId})</span>
+                          <span>{u.storeName} <span className="font-mono text-slate-400 text-[11px]">({u.storeId})</span></span>
                         ) : u.licenseNumber ? (
-                          <span className="font-mono text-slate-700 bg-slate-100 px-2 py-0.5 rounded">Lic: {u.licenseNumber}</span>
+                          <span className="font-mono text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded font-bold">Lic: {u.licenseNumber}</span>
                         ) : (
-                          <span className="text-slate-400 italic">System-wide Access</span>
+                          <span className="text-slate-400 italic">System-wide Governance</span>
                         )}
                       </td>
                       <td className="px-6 py-4">
                         {u.isActive !== false ? (
-                          <span className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold text-[11px]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span className="inline-flex items-center gap-1.5 text-emerald-700 font-bold text-[11px] bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 text-rose-700 font-semibold text-[11px]">
+                          <span className="inline-flex items-center gap-1.5 text-rose-700 font-bold text-[11px] bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
                             <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                             Deactivated
                           </span>
@@ -444,7 +479,7 @@ export const AdminDashboard: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleToggleUserStatus(u)}
-                            className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors shadow-xs ${
+                            className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-all shadow-2xs active:scale-95 ${
                               u.isActive !== false
                                 ? 'border-rose-200 text-rose-700 hover:bg-rose-50'
                                 : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'
@@ -463,29 +498,35 @@ export const AdminDashboard: React.FC = () => {
             {/* Mobile View */}
             <div className="md:hidden divide-y divide-slate-100">
               {filteredUsers.map((u) => (
-                <div key={u.id} className="p-4 space-y-2.5">
+                <div key={u.id} className="p-4 space-y-3">
                   <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-semibold text-navy-950 text-sm">{u.name}</div>
-                      <div className="text-[11px] text-slate-400 font-mono">{u.email}</div>
+                    <div className="flex items-center space-x-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-navy-900 text-white font-bold flex items-center justify-center text-xs">
+                        {u.name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-bold text-navy-950 text-sm">{u.name}</div>
+                        <div className="text-[11px] text-slate-400 font-mono">{u.email}</div>
+                      </div>
                     </div>
                     {u.role === 'ADMIN' && (
-                      <span className="px-2 py-0.5 rounded-md bg-slate-900 text-white text-[10px] font-semibold">Admin</span>
+                      <span className="px-2 py-0.5 rounded-md bg-navy-950 text-white text-[10px] font-bold">Admin</span>
                     )}
                     {u.role === 'OPTOMETRIST' && (
-                      <span className="px-2 py-0.5 rounded-md bg-navy-50 text-navy-900 border border-navy-200 text-[10px] font-semibold">Optometrist</span>
+                      <span className="px-2 py-0.5 rounded-md bg-teal-50 text-teal-900 border border-teal-200 text-[10px] font-bold">Optometrist</span>
                     )}
                     {u.role === 'STORE_OPERATOR' && (
-                      <span className="px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200 text-[10px] font-semibold">Operator</span>
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold">Operator</span>
                     )}
                   </div>
 
-                  <div className="text-xs text-slate-500">
-                    Affiliation: {u.storeName || u.licenseNumber || 'System-wide'}
+                  <div className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 text-[10px] block uppercase font-bold">Affiliation:</span>
+                    {u.storeName || u.licenseNumber || 'System-wide Access'}
                   </div>
 
                   <div className="flex items-center justify-between pt-1">
-                    <span className={`text-[11px] font-semibold flex items-center gap-1 ${u.isActive !== false ? 'text-emerald-700' : 'text-rose-700'}`}>
+                    <span className={`text-[11px] font-bold flex items-center gap-1 ${u.isActive !== false ? 'text-emerald-700' : 'text-rose-700'}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${u.isActive !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                       {u.isActive !== false ? 'Active Account' : 'Deactivated'}
                     </span>
@@ -493,7 +534,7 @@ export const AdminDashboard: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleToggleUserStatus(u)}
-                        className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600"
+                        className="text-xs font-semibold px-3 py-1 rounded-xl border border-slate-200 text-slate-700 bg-white shadow-2xs"
                       >
                         {u.isActive !== false ? 'Deactivate' : 'Activate'}
                       </button>
@@ -511,7 +552,7 @@ export const AdminDashboard: React.FC = () => {
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
+                <thead className="bg-slate-50/80 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
                   <tr>
                     <th className="px-6 py-3.5">Store Code & Name</th>
                     <th className="px-6 py-3.5">Location & District</th>
@@ -523,24 +564,24 @@ export const AdminDashboard: React.FC = () => {
                   {filteredStores.map((st) => (
                     <tr key={st.id || st.code} className="hover:bg-slate-50/70 transition-colors">
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-navy-950 text-sm">{st.name}</div>
-                        <div className="text-[11px] font-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded w-fit mt-0.5 border border-teal-200">
+                        <div className="font-bold text-navy-950 text-sm">{st.name}</div>
+                        <div className="text-[11px] font-mono font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded w-fit mt-0.5 border border-teal-200">
                           {st.code}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-slate-600">
                         <div>{st.location.address}</div>
-                        <div className="text-[11px] text-slate-400">
+                        <div className="text-[11px] text-slate-400 font-medium">
                           {st.location.city}, {st.location.state} - {st.location.pincode}
                         </div>
                       </td>
                       <td className="px-6 py-4 text-slate-600">
-                        <div>{st.contactNumber || 'Not listed'}</div>
+                        <div className="font-medium">{st.contactNumber || 'Not listed'}</div>
                         <div className="text-[11px] text-slate-400 font-mono">{st.email}</div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold text-[11px] bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 shadow-xs">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span className="inline-flex items-center gap-1.5 text-emerald-700 font-bold text-[11px] bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 shadow-2xs">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                           Operational
                         </span>
                       </td>
@@ -553,21 +594,21 @@ export const AdminDashboard: React.FC = () => {
             {/* Mobile View */}
             <div className="md:hidden divide-y divide-slate-100">
               {filteredStores.map((st) => (
-                <div key={st.id || st.code} className="p-4 space-y-2">
+                <div key={st.id || st.code} className="p-4 space-y-2.5">
                   <div className="flex items-start justify-between">
                     <div>
-                      <div className="font-semibold text-navy-950 text-sm">{st.name}</div>
-                      <div className="text-[10px] font-mono text-teal-700">{st.code}</div>
+                      <div className="font-bold text-navy-950 text-sm">{st.name}</div>
+                      <div className="text-[10px] font-mono font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 w-fit mt-0.5">{st.code}</div>
                     </div>
-                    <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 text-[10px] font-semibold">
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200">
                       Operational
                     </span>
                   </div>
-                  <div className="text-xs text-slate-600">
-                    {st.location.address}, {st.location.city}
-                  </div>
-                  <div className="text-[11px] text-slate-400">
-                    Phone: {st.contactNumber || 'N/A'} • {st.email}
+                  <div className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100 space-y-1">
+                    <div>{st.location.address}, {st.location.city}</div>
+                    <div className="text-[11px] text-slate-400">
+                      Phone: {st.contactNumber || 'N/A'} • {st.email}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -577,18 +618,19 @@ export const AdminDashboard: React.FC = () => {
 
       </div>
 
-      {/* MODAL 1: Create User */}
+      {/* MODAL 1: Create User (Safe z-[100] Layer) */}
       {showUserModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-healthcare-lg overflow-hidden my-8">
-            <div className="p-5 sm:p-6 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-md animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden my-8 animate-slide-up">
+            <div className="p-5 sm:p-6 border-b border-slate-200/90 bg-slate-50/70 flex items-center justify-between">
               <div>
-                <h3 className="font-display font-bold text-navy-950 text-base">Provision New User Account</h3>
+                <h3 className="font-display font-extrabold text-navy-950 text-lg">Provision New User Account</h3>
                 <p className="text-xs text-slate-500">Create optometrist reviewer, store operator, or admin account</p>
               </div>
               <button 
                 onClick={() => setShowUserModal(false)} 
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-sm font-bold transition-colors"
+                className="w-9 h-9 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-navy-950 flex items-center justify-center text-sm font-bold transition-colors"
+                title="Close modal"
               >
                 ✕
               </button>
@@ -605,11 +647,11 @@ export const AdminDashboard: React.FC = () => {
                   placeholder="e.g. Dr. Priya Nair"
                   value={newUserForm.name}
                   onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500 font-medium"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Email Address *
@@ -620,7 +662,7 @@ export const AdminDashboard: React.FC = () => {
                     placeholder="priya@visionbridge.org"
                     value={newUserForm.email}
                     onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500"
                   />
                 </div>
 
@@ -634,7 +676,7 @@ export const AdminDashboard: React.FC = () => {
                     placeholder="Min 8 characters"
                     value={newUserForm.password}
                     onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500"
                   />
                 </div>
               </div>
@@ -646,7 +688,7 @@ export const AdminDashboard: React.FC = () => {
                 <select
                   value={newUserForm.role}
                   onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value as UserRole })}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500 font-medium"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500 font-semibold text-slate-800 bg-white"
                 >
                   <option value="OPTOMETRIST">Optometrist (Clinical Reviewer)</option>
                   <option value="STORE_OPERATOR">Store Operator (Field Screener)</option>
@@ -665,7 +707,7 @@ export const AdminDashboard: React.FC = () => {
                     placeholder="e.g. OPT-IN-2024-9921"
                     value={newUserForm.licenseNumber}
                     onChange={(e) => setNewUserForm({ ...newUserForm, licenseNumber: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500 font-mono"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500 font-mono"
                   />
                 </div>
               )}
@@ -690,7 +732,7 @@ export const AdminDashboard: React.FC = () => {
                       });
                     }}
                     required={newUserForm.role === 'STORE_OPERATOR'}
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500 font-medium text-slate-800"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500 font-medium text-slate-800 bg-white"
                   >
                     <option value="">
                       {newUserForm.role === 'STORE_OPERATOR' 
@@ -715,13 +757,13 @@ export const AdminDashboard: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowUserModal(false)}
-                  className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="px-4 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
+                  className="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white rounded-xl text-xs font-bold shadow-healthcare hover:shadow-glow-teal transition-all active:scale-95"
                 >
                   Provision Account
                 </button>
@@ -731,25 +773,26 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL 2: Create Store */}
+      {/* MODAL 2: Create Store (Safe z-[100] Layer) */}
       {showStoreModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-healthcare-lg overflow-hidden my-8">
-            <div className="p-5 sm:p-6 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-md animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden my-8 animate-slide-up">
+            <div className="p-5 sm:p-6 border-b border-slate-200/90 bg-slate-50/70 flex items-center justify-between">
               <div>
-                <h3 className="font-display font-bold text-navy-950 text-base">Register Optical Center</h3>
+                <h3 className="font-display font-extrabold text-navy-950 text-lg">Register Optical Center</h3>
                 <p className="text-xs text-slate-500">Add local partner store or rural outreach center</p>
               </div>
               <button 
                 onClick={() => setShowStoreModal(false)} 
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-sm font-bold transition-colors"
+                className="w-9 h-9 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-navy-950 flex items-center justify-center text-sm font-bold transition-colors"
+                title="Close modal"
               >
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleCreateStoreSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     Store Code *
@@ -760,7 +803,7 @@ export const AdminDashboard: React.FC = () => {
                     placeholder="e.g. ST-AP-KADAPA-04"
                     value={newStoreForm.code}
                     onChange={(e) => setNewStoreForm({ ...newStoreForm, code: e.target.value.toUpperCase() })}
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs font-mono uppercase focus:outline-none focus:border-teal-500"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-mono uppercase focus:outline-none focus:border-teal-500 font-bold"
                   />
                 </div>
 
@@ -774,7 +817,7 @@ export const AdminDashboard: React.FC = () => {
                     placeholder="e.g. VisionPoint Kadapa"
                     value={newStoreForm.name}
                     onChange={(e) => setNewStoreForm({ ...newStoreForm, name: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500 font-medium"
                   />
                 </div>
               </div>
@@ -789,7 +832,7 @@ export const AdminDashboard: React.FC = () => {
                   placeholder="e.g. 104 Gandhi Road, Near Clock Tower"
                   value={newStoreForm.address}
                   onChange={(e) => setNewStoreForm({ ...newStoreForm, address: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500"
                 />
               </div>
 
@@ -836,17 +879,45 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Contact Phone
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="+91 98765 00000"
+                    value={newStoreForm.contactNumber}
+                    onChange={(e) => setNewStoreForm({ ...newStoreForm, contactNumber: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Center Email
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="kadapa@visionpoint.org"
+                    value={newStoreForm.email}
+                    onChange={(e) => setNewStoreForm({ ...newStoreForm, email: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:border-teal-500"
+                  />
+                </div>
+              </div>
+
               <div className="flex items-center justify-end gap-3 pt-3">
                 <button
                   type="button"
                   onClick={() => setShowStoreModal(false)}
-                  className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="px-4 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-navy-950 hover:bg-navy-900 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
+                  className="px-5 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white rounded-xl text-xs font-bold shadow-healthcare hover:shadow-glow-teal transition-all active:scale-95"
                 >
                   Register Store Center
                 </button>

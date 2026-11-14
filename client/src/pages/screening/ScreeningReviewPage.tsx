@@ -146,8 +146,8 @@ export const ScreeningReviewPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50/70 pb-16 animate-fade-in">
-      {/* Top Header */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+      {/* Top Tele-Review Sub-Header (Sticky below main navbar without collision) */}
+      <div className="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-16 z-30 shadow-2xs">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -187,7 +187,7 @@ export const ScreeningReviewPage: React.FC = () => {
             </a>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -611,7 +611,7 @@ export const ScreeningReviewPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmittingReview || !reviewNotes.trim()}
-                className="px-8 py-3 bg-teal-600 text-white font-bold text-sm rounded-xl hover:bg-teal-700 shadow-xs flex items-center space-x-2 disabled:opacity-50 transition-colors"
+                className="px-7 py-2.5 bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white font-bold text-xs sm:text-sm rounded-xl shadow-healthcare hover:shadow-glow-teal flex items-center space-x-2 disabled:opacity-50 transition-all active:scale-95"
               >
                 {isSubmittingReview ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 <span>Sign Off Clinical Review</span>
