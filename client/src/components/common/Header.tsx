@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useAuth, UserRole } from '@/context/AuthContext';
 import { NetworkStatusBadge } from './NetworkStatusBadge';
+import { AiServiceStatusBadge } from './AiServiceStatusBadge';
 
 export const Header: React.FC = () => {
   const { user, role, isAuthenticated, logout, loginAsDemo } = useAuth();
@@ -141,6 +142,7 @@ export const Header: React.FC = () => {
 
           {/* Right Utilities & Quick Persona Switcher */}
           <div className="hidden md:flex items-center gap-3">
+            <AiServiceStatusBadge />
             <NetworkStatusBadge />
 
             {/* Demo Persona Quick-Switch Dropdown */}
@@ -313,6 +315,12 @@ export const Header: React.FC = () => {
       {/* Mobile Drawer Navigation (Slide-down glass panel) */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-slate-200 glass-header px-4 pt-3 pb-6 space-y-3 animate-slide-up">
+          {/* Status Badges Row */}
+          <div className="flex items-center justify-between pb-1">
+            <AiServiceStatusBadge />
+            <NetworkStatusBadge />
+          </div>
+
           {/* Quick Persona Switcher in Mobile Drawer */}
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">

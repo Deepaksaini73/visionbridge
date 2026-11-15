@@ -10,6 +10,8 @@
   "scripts": {
     "dev:server": "npm --workspace=server run dev",
     "dev:client": "npm --workspace=client run dev -- --host 0.0.0.0",
+    "dev:ai": "cd ai-service && .venv\\Scripts\\uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload",
+    "test:ai": "cd ai-service && .venv\\Scripts\\pytest tests -v",
     "dev": "concurrently -n \"SERVER,CLIENT\" -c \"blue,teal\" \"npm run dev:server\" \"npm run dev:client\"",
     "build:server": "npm --workspace=server run build",
     "build:client": "npm --workspace=client run build",

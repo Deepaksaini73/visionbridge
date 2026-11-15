@@ -44,3 +44,18 @@ Thumbs.db
 # Temporary & Cache
 .cache
 .eslintcache
+
+# Python & AI Service
+ai-service/.venv/
+.venv/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+

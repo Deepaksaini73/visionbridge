@@ -66,6 +66,11 @@ VisionBridge is a voice-first, AI-assisted preliminary vision-screening and tele
 
 ```
 visionbridge/
+├── ai-service/          # Python AI & Computer Vision Service (FastAPI, OpenCV, Pillow)
+│   ├── app/             # FastAPI routes, image decodability validator, Pydantic schemas
+│   ├── tests/           # Automated pytest test suites
+│   ├── requirements.txt # Foundation dependencies
+│   └── start.bat / ps1  # Dedicated launcher scripts
 ├── client/              # React 18 + Vite + TypeScript + Tailwind CSS Frontend
 │   ├── src/
 │   │   ├── components/  # Reusable UI system (StatCard, Badge, PageHeader, EmptyState)
@@ -76,7 +81,7 @@ visionbridge/
 │   └── vite.config.ts   # Vite configuration with API proxy to port 5000
 ├── server/              # Node.js + Express + TypeScript Backend
 │   ├── src/
-│   │   ├── controllers/ # Auth, Customers, Screenings, Interviews, Imaging
+│   │   ├── controllers/ # Auth, Customers, Screenings, Interviews, Imaging, AI Gateway
 │   │   ├── models/      # Mongoose schemas for MongoDB
 │   │   ├── routes/      # REST API endpoints & authenticated media streaming
 │   │   ├── services/    # Google Gemini AI summary service
@@ -164,6 +169,7 @@ npm run dev
 
 - **Client App**: [http://localhost:5173](http://localhost:5173)
 - **Backend API**: [http://localhost:5000/api](http://localhost:5000/api)
+- **Python AI Microservice**: [http://127.0.0.1:8001/docs](http://127.0.0.1:8001/docs)
 
 > **Individual commands** (if running in separate terminal windows):
 > ```bash
@@ -172,6 +178,13 @@ npm run dev
 > 
 > # Terminal 2: Frontend Client (Port 5173)
 > npm run dev:client
+> 
+> # Terminal 3: Python AI & Computer Vision Microservice (Port 8001)
+> npm run dev:ai
+> # Or on Windows: .\ai-service\start.bat
+> 
+> # Automated Python Test Suite (pytest)
+> npm run test:ai
 > ```
 
 ---

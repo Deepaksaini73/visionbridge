@@ -14,6 +14,7 @@ import userRoutes from './routes/userRoutes.js';
 import interviewRoutes from './routes/interviewRoutes.js';
 import screeningRoutes from './routes/screeningRoutes.js';
 import imageRoutes from './routes/imageRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -43,6 +44,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/interviews', interviewRoutes);
 app.use('/api/screenings', screeningRoutes);
 app.use('/api/images', imageRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Root fallback / ping
 app.get('/', (_req: Request, res: Response) => {
