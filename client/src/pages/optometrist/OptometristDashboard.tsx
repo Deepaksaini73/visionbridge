@@ -599,10 +599,10 @@ export const OptometristDashboard: React.FC = () => {
                         type="button"
                         onClick={() => handleReviewEyeImages(c)}
                         disabled={isLoadingImages}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200 transition-all shadow-2xs active:scale-95"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-purple-50 text-purple-900 hover:bg-purple-100 border border-purple-200 transition-all shadow-2xs active:scale-95"
                       >
-                        <Camera className="w-3.5 h-3.5 text-teal-600" />
-                        <span>View Images</span>
+                        <Sparkles className="w-3.5 h-3.5 text-purple-600 animate-pulse" />
+                        <span>EyeCapture AI Photos</span>
                       </button>
 
                       <button

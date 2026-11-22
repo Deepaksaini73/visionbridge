@@ -1,5 +1,11 @@
 import { apiRequest, getAuthenticatedMediaUrl } from '../../../services/api';
-import { ClinicalEyeImageRecord, ImageUploadPayload, EyeImageReviewRecord } from '../types/imaging';
+import {
+  ClinicalEyeImageRecord,
+  ImageUploadPayload,
+  EyeCaptureAiAnalysis,
+  EyeQualityAssessment,
+  AdnexalTelemetryData,
+} from '../types/imaging';
 
 export { getAuthenticatedMediaUrl };
 
@@ -82,5 +88,67 @@ export const imagingApi = {
       method: 'DELETE',
     });
     return res.success;
+  },
+
+  // EyeCapture AI (Milestone 5.1)
+  checkEyeQuality: async (params: {
+    imageId?: string;
+    imageData?: string;
+    filename?: string;
+  }): Promise<EyeQualityAssessment> => {
+    const res = await apiRequest<EyeQualityAssessment>('/ai/eye-analysis/quality-check', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    if (!res.success || !res.data) {
+      throw new Error(res.error?.message || res.message || 'Quality assessment failed');
+    }
+    return res.data;
+  },
+
+  analyzeEyeWithAi: async (params: {
+    imageId?: string;
+    imageData?: string;
+    filename?: string;
+    forceSegmentation?: boolean;
+  }): Promise<EyeCaptureAiAnalysis> => {
+    const res = await apiRequest<EyeCaptureAiAnalysis>('/ai/eye-analysis/analyze', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    if (!res.success || !res.data) {
+      throw new Error(res.error?.message || res.message || 'EyeCapture AI analysis failed');
+    }
+    return res.data;
+  },
+
+  getEyeAnalysisStatus: async (): Promise<any> => {
+    const res = await apiRequest('/ai/eye-analysis/status', {
+      method: 'GET',
+    });
+    return res.data;
+  },
+
+  // Milestone 5.2B: Adnexal & Alignment Telemetry
+  analyzeAdnexalAlignment: async (params: {
+    imageId?: string;
+    imageData?: string;
+    filename?: string;
+  }): Promise<AdnexalTelemetryData> => {
+    const res = await apiRequest<AdnexalTelemetryData>('/ai/adnexal/analyze', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    if (!res.success || !res.data) {
+      throw new Error(res.error?.message || res.message || 'Adnexal telemetry analysis failed');
+    }
+    return res.data;
+  },
+
+  getAdnexalStatus: async (): Promise<any> => {
+    const res = await apiRequest('/ai/adnexal/status', {
+      method: 'GET',
+    });
+    return res.data;
   },
 };

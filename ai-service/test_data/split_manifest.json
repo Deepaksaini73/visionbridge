@@ -1,0 +1,45 @@
+{
+  "dataset": "MOBIUS Ocular Subset",
+  "random_seed": 42,
+  "target_resolution": [
+    256,
+    256
+  ],
+  "class_labels": {
+    "0": "periocular_background",
+    "1": "sclera",
+    "2": "iris",
+    "3": "pupil"
+  },
+  "counts": {
+    "total_subjects": 1,
+    "total_images": 4,
+    "train_subjects": 1,
+    "val_subjects": 0,
+    "test_subjects": 0
+  },
+  "splits": {
+    "train": {
+      "subjects": [
+        "SUBJ"
+      ],
+      "image_count": 4,
+      "images": [
+        "SUBJ_001_sess1_phone1_left_02.png",
+        "SUBJ_001_sess1_phone1_straight_01.png",
+        "SUBJ_002_sess1_phone1_left_02.png",
+        "SUBJ_002_sess1_phone1_straight_01.png"
+      ]
+    },
+    "val": {
+      "subjects": [],
+      "image_count": 0,
+      "images": []
+    },
+    "test": {
+      "subjects": [],
+      "image_count": 0,
+      "images": []
+    }
+  }
+}

@@ -1,0 +1,450 @@
+{
+  "metadata": {
+    "timestamp": "2026-11-21 18:54:45 UTC",
+    "model": "jusiro2/FLAIR",
+    "repository": "https://github.com/jusiro/FLAIR",
+    "paper": "https://arxiv.org/abs/2308.07898",
+    "device": "cpu",
+    "torch_version": "2.15.0+cpu",
+    "total_parameters": 133260097,
+    "vision_parameters": 24556608,
+    "text_parameters": 108703488,
+    "learned_logit_scale": 2.8585076332092285,
+    "effective_scale_multiplier": 17.435487747192383,
+    "disclaimer": "EXPERIMENTAL RETINAL IMAGE-TEXT SIMILARITY RESULTS \u2014 REQUIRES PROFESSIONAL REVIEW. DO NOT USE FOR DIRECT CLINICAL DIAGNOSIS OR SPECTACLE POWER DETERMINATION."
+  },
+  "benchmarks": {
+    "normal_sample": {
+      "file_name": "normal_sample.png",
+      "ground_truth": "Normal Retinal Fundus",
+      "image_type": "retinal_fundus",
+      "original_dimensions": [
+        512,
+        512
+      ],
+      "prompt_set_evaluations": {
+        "standard_clinical": {
+          "latency_ms": 4032.12,
+          "top_prediction": "normal retinal fundus",
+          "top_probability": 0.8044,
+          "rankings": [
+            {
+              "rank": 1,
+              "prompt": "normal retinal fundus",
+              "pseudo_probability": 0.8043816089630127,
+              "raw_logit": 2.6942298412323,
+              "cosine_similarity": 0.15452563646612918
+            },
+            {
+              "rank": 2,
+              "prompt": "suboptimal or non-fundus image",
+              "pseudo_probability": 0.10531270503997803,
+              "raw_logit": 0.6610901355743408,
+              "cosine_similarity": 0.03791635457291956
+            },
+            {
+              "rank": 3,
+              "prompt": "macular hole",
+              "pseudo_probability": 0.04903291538357735,
+              "raw_logit": -0.10335202515125275,
+              "cosine_similarity": -0.005927681900834429
+            },
+            {
+              "rank": 4,
+              "prompt": "glaucoma",
+              "pseudo_probability": 0.017788806930184364,
+              "raw_logit": -1.1172744035720825,
+              "cosine_similarity": -0.06408047883558611
+            },
+            {
+              "rank": 5,
+              "prompt": "macular edema",
+              "pseudo_probability": 0.013537129387259483,
+              "raw_logit": -1.3904075622558594,
+              "cosine_similarity": -0.07974583690552363
+            },
+            {
+              "rank": 6,
+              "prompt": "diabetic retinopathy",
+              "pseudo_probability": 0.009946872480213642,
+              "raw_logit": -1.6985856294631958,
+              "cosine_similarity": -0.09742117078065207
+            }
+          ]
+        },
+        "flair_canonical": {
+          "latency_ms": 3833.21,
+          "top_prediction": "normal",
+          "top_probability": 0.9988,
+          "rankings": [
+            {
+              "rank": 1,
+              "prompt": "normal",
+              "pseudo_probability": 0.9988149404525757,
+              "raw_logit": 7.378680229187012,
+              "cosine_similarity": 0.4231989569878934
+            },
+            {
+              "rank": 2,
+              "prompt": "macular hole",
+              "pseudo_probability": 0.0006118147284723818,
+              "raw_logit": -0.01921495422720909,
+              "cosine_similarity": -0.0011020600344434444
+            },
+            {
+              "rank": 3,
+              "prompt": "age-related macular degeneration",
+              "pseudo_probability": 0.0002350101131014526,
+              "raw_logit": -0.9760162830352783,
+              "cosine_similarity": -0.05597871979190517
+            },
+            {
+              "rank": 4,
+              "prompt": "glaucoma",
+              "pseudo_probability": 0.00021234613086562604,
+              "raw_logit": -1.0774266719818115,
+              "cosine_similarity": -0.06179504052906741
+            },
+            {
+              "rank": 5,
+              "prompt": "diabetic retinopathy",
+              "pseudo_probability": 0.00012593131395988166,
+              "raw_logit": -1.5999075174331665,
+              "cosine_similarity": -0.09176155784289991
+            }
+          ]
+        },
+        "detailed_morphological": {
+          "latency_ms": 4003.18,
+          "top_prediction": "healthy normal retina with sharp optic disc margins and intact fovea",
+          "top_probability": 0.9328,
+          "rankings": [
+            {
+              "rank": 1,
+              "prompt": "healthy normal retina with sharp optic disc margins and intact fovea",
+              "pseudo_probability": 0.9328057169914246,
+              "raw_logit": 5.33810567855835,
+              "cosine_similarity": 0.3061632548488894
+            },
+            {
+              "rank": 2,
+              "prompt": "glaucoma with optic nerve cup enlargement and neuroretinal rim thinning",
+              "pseudo_probability": 0.06061742082238197,
+              "raw_logit": 2.6044909954071045,
+              "cosine_similarity": 0.1493787287841433
+            },
+            {
+              "rank": 3,
+              "prompt": "full-thickness macular hole with round central foveal defect",
+              "pseudo_probability": 0.003547017928212881,
+              "raw_logit": -0.23398390412330627,
+              "cosine_similarity": -0.013419980416721319
+            },
+            {
+              "rank": 4,
+              "prompt": "external smartphone photograph of anterior eye, cornea, and eyelid",
+              "pseudo_probability": 0.0021569218952208757,
+              "raw_logit": -0.7314091324806213,
+              "cosine_similarity": -0.04194945063113588
+            },
+            {
+              "rank": 5,
+              "prompt": "severe diabetic retinopathy with extensive microaneurysms and retinal hemorrhages",
+              "pseudo_probability": 0.0008728672401048243,
+              "raw_logit": -1.6360628604888916,
+              "cosine_similarity": -0.09383522183096626
+            }
+          ]
+        }
+      }
+    },
+    "sample_macular_hole": {
+      "file_name": "sample_macular_hole.png",
+      "ground_truth": "Macular Hole",
+      "image_type": "retinal_fundus",
+      "original_dimensions": [
+        796,
+        772
+      ],
+      "prompt_set_evaluations": {
+        "standard_clinical": {
+          "latency_ms": 4046.35,
+          "top_prediction": "macular hole",
+          "top_probability": 0.6924,
+          "rankings": [
+            {
+              "rank": 1,
+              "prompt": "macular hole",
+              "pseudo_probability": 0.6924299597740173,
+              "raw_logit": 7.4624152183532715,
+              "cosine_similarity": 0.4280015177410185
+            },
+            {
+              "rank": 2,
+              "prompt": "glaucoma",
+              "pseudo_probability": 0.16210560500621796,
+              "raw_logit": 6.010456085205078,
+              "cosine_similarity": 0.3447254342611055
+            },
+            {
+              "rank": 3,
+              "prompt": "suboptimal or non-fundus image",
+              "pseudo_probability": 0.10406284034252167,
+              "raw_logit": 5.567203044891357,
+              "cosine_similarity": 0.3193029713658477
+            },
+            {
+              "rank": 4,
+              "prompt": "diabetic retinopathy",
+              "pseudo_probability": 0.027609705924987793,
+              "raw_logit": 4.240375518798828,
+              "cosine_similarity": 0.24320372221773096
+            },
+            {
+              "rank": 5,
+              "prompt": "macular edema",
+              "pseudo_probability": 0.010710489936172962,
+              "raw_logit": 3.2934319972991943,
+              "cosine_similarity": 0.1888924499877861
+            },
+            {
+              "rank": 6,
+              "prompt": "normal retinal fundus",
+              "pseudo_probability": 0.003081457456573844,
+              "raw_logit": 2.0476109981536865,
+              "cosine_similarity": 0.11743927258263315
+            }
+          ]
+        },
+        "flair_canonical": {
+          "latency_ms": 6083.41,
+          "top_prediction": "age-related macular degeneration",
+          "top_probability": 0.9789,
+          "rankings": [
+            {
+              "rank": 1,
+              "prompt": "age-related macular degeneration",
+              "pseudo_probability": 0.9788969159126282,
+              "raw_logit": 11.588053703308105,
+              "cosine_similarity": 0.6646245789811138
+            },
+            {
+              "rank": 2,
+              "prompt": "macular hole",
+              "pseudo_probability": 0.01634632982313633,
+              "raw_logit": 7.495630741119385,
+              "cosine_similarity": 0.4299065704271105
+            },
+            {
+              "rank": 3,
+              "prompt": "glaucoma",
+              "pseudo_probability": 0.004054998978972435,
+              "raw_logit": 6.1015777587890625,
+              "cosine_similarity": 0.34995165304575965
+            },
+            {
+              "rank": 4,
+              "prompt": "diabetic retinopathy",
+              "pseudo_probability": 0.0006948839290998876,
+              "raw_logit": 4.337616920471191,
+              "cosine_similarity": 0.2487809336546764
+            },
+            {
+              "rank": 5,
+              "prompt": "normal",
+              "pseudo_probability": 6.868052878417075e-06,
+              "raw_logit": -0.2792474925518036,
+              "cosine_similarity": -0.016016041340556734
+            }
+          ]
+        },
+        "detailed_morphological": {
+          "latency_ms": 1601.73,
+          "top_prediction": "full-thickness macular hole with round central foveal defect",
+          "top_probability": 0.638,
+          "rankings": [
+            {
+              "rank": 1,
+              "prompt": "full-thickness macular hole with round central foveal defect",
+              "pseudo_probability": 0.6380167007446289,
+              "raw_logit": 10.662148475646973,
+              "cosine_similarity": 0.6115199431322985
+            },
+            {
+              "rank": 2,
+              "prompt": "glaucoma with optic nerve cup enlargement and neuroretinal rim thinning",
+              "pseudo_probability": 0.36103472113609314,
+              "raw_logit": 10.092758178710938,
+              "cosine_similarity": 0.5788629675895453
+            },
+            {
+              "rank": 3,
+              "prompt": "external smartphone photograph of anterior eye, cornea, and eyelid",
+              "pseudo_probability": 0.0005091466009616852,
+              "raw_logit": 3.5287649631500244,
+              "cosine_similarity": 0.20238980488046612
+            },
+            {
+              "rank": 4,
+              "prompt": "healthy normal retina with sharp optic disc margins and intact fovea",
+              "pseudo_probability": 0.00043247462599538267,
+              "raw_logit": 3.3655524253845215,
+              "cosine_similarity": 0.1930288658501379
+            },
+            {
+              "rank": 5,
+              "prompt": "severe diabetic retinopathy with extensive microaneurysms and retinal hemorrhages",
+              "pseudo_probability": 6.998515800660243e-06,
+              "raw_logit": -0.7582736015319824,
+              "cosine_similarity": -0.04349024314814975
+            }
+          ]
+        }
+      }
+    },
+    "severe_nonprol_dr": {
+      "file_name": "severe_nonprol_dr.jpg",
+      "ground_truth": "Severe Non-Proliferative Diabetic Retinopathy",
+      "image_type": "retinal_fundus",
+      "original_dimensions": [
+        1024,
+        683
+      ],
+      "prompt_set_evaluations": {
+        "standard_clinical": {
+          "latency_ms": 1625.79,
+          "top_prediction": "macular edema",
+          "top_probability": 0.8099,
+          "rankings": [
+            {
+              "rank": 1,
+              "prompt": "macular edema",
+              "pseudo_probability": 0.8098722100257874,
+              "raw_logit": 9.573116302490234,
+              "cosine_similarity": 0.5490592773369235
+            },
+            {
+              "rank": 2,
+              "prompt": "diabetic retinopathy",
+              "pseudo_probability": 0.18074293434619904,
+              "raw_logit": 8.073315620422363,
+              "cosine_similarity": 0.46303927584259297
+            },
+            {
+              "rank": 3,
+              "prompt": "suboptimal or non-fundus image",
+              "pseudo_probability": 0.005160709843039513,
+              "raw_logit": 4.5173139572143555,
+              "cosine_similarity": 0.2590873294004507
+            },
+            {
+              "rank": 4,
+              "prompt": "glaucoma",
+              "pseudo_probability": 0.0025123937521129847,
+              "raw_logit": 3.797475576400757,
+              "cosine_similarity": 0.21780151100230966
+            },
+            {
+              "rank": 5,
+              "prompt": "macular hole",
+              "pseudo_probability": 0.0017090394394472241,
+              "raw_logit": 3.4121716022491455,
+              "cosine_similarity": 0.1957026755846623
+            },
+            {
+              "rank": 6,
+              "prompt": "normal retinal fundus",
+              "pseudo_probability": 2.6937304937746376e-06,
+              "raw_logit": -3.040588855743408,
+              "cosine_similarity": -0.17439081142040497
+            }
+          ]
+        },
+        "flair_canonical": {
+          "latency_ms": 1691.98,
+          "top_prediction": "diabetic retinopathy",
+          "top_probability": 0.9562,
+          "rankings": [
+            {
+              "rank": 1,
+              "prompt": "diabetic retinopathy",
+              "pseudo_probability": 0.9561759233474731,
+              "raw_logit": 8.177995681762695,
+              "cosine_similarity": 0.4690431263145815
+            },
+            {
+              "rank": 2,
+              "prompt": "age-related macular degeneration",
+              "pseudo_probability": 0.02243434451520443,
+              "raw_logit": 4.425646781921387,
+              "cosine_similarity": 0.2538298237532267
+            },
+            {
+              "rank": 3,
+              "prompt": "glaucoma",
+              "pseudo_probability": 0.013199977576732635,
+              "raw_logit": 3.8952689170837402,
+              "cosine_similarity": 0.22341037850868217
+            },
+            {
+              "rank": 4,
+              "prompt": "macular hole",
+              "pseudo_probability": 0.008162358775734901,
+              "raw_logit": 3.4145870208740234,
+              "cosine_similarity": 0.1958412102020989
+            },
+            {
+              "rank": 5,
+              "prompt": "normal",
+              "pseudo_probability": 2.747343751252629e-05,
+              "raw_logit": -2.279482126235962,
+              "cosine_similarity": -0.13073807623208156
+            }
+          ]
+        },
+        "detailed_morphological": {
+          "latency_ms": 1995.47,
+          "top_prediction": "severe diabetic retinopathy with extensive microaneurysms and retinal hemorrhages",
+          "top_probability": 0.8029,
+          "rankings": [
+            {
+              "rank": 1,
+              "prompt": "severe diabetic retinopathy with extensive microaneurysms and retinal hemorrhages",
+              "pseudo_probability": 0.8029481172561646,
+              "raw_logit": 6.927312850952148,
+              "cosine_similarity": 0.39731110201190933
+            },
+            {
+              "rank": 2,
+              "prompt": "healthy normal retina with sharp optic disc margins and intact fovea",
+              "pseudo_probability": 0.19115573167800903,
+              "raw_logit": 5.4921112060546875,
+              "cosine_similarity": 0.3149961323530554
+            },
+            {
+              "rank": 3,
+              "prompt": "full-thickness macular hole with round central foveal defect",
+              "pseudo_probability": 0.0029853302985429764,
+              "raw_logit": 1.332732915878296,
+              "cosine_similarity": 0.07643794857949439
+            },
+            {
+              "rank": 4,
+              "prompt": "glaucoma with optic nerve cup enlargement and neuroretinal rim thinning",
+              "pseudo_probability": 0.0028938071336597204,
+              "raw_logit": 1.30159592628479,
+              "cosine_similarity": 0.07465210868530962
+            },
+            {
+              "rank": 5,
+              "prompt": "external smartphone photograph of anterior eye, cornea, and eyelid",
+              "pseudo_probability": 1.6897352907108143e-05,
+              "raw_logit": -3.8415751457214355,
+              "cosine_similarity": -0.22033081043804123
+            }
+          ]
+        }
+      }
+    }
+  }
+}

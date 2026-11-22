@@ -8,7 +8,6 @@ import {
   ChevronLeft, 
   ChevronRight, 
   Download, 
-  Brain, 
   Sparkles, 
   Eye, 
   Calendar, 
@@ -20,9 +19,21 @@ import {
   Clock, 
   Loader2,
   Stethoscope,
-  Info
+  Info,
+  Layers,
+  Sliders,
+  RefreshCw,
+  Lightbulb,
+  Crosshair,
+  Ruler,
+  Compass,
 } from 'lucide-react';
-import { ClinicalEyeImageRecord, EyeSide, ClinicalImageType } from '../types/imaging';
+import { 
+  ClinicalEyeImageRecord, 
+  EyeSide, 
+  EyeCaptureAiAnalysis, 
+  AdnexalTelemetryData 
+} from '../types/imaging';
 import { imagingApi, getAuthenticatedMediaUrl } from '../services/imagingApi';
 import { useAuth } from '../../../context/AuthContext';
 
@@ -35,14 +46,14 @@ interface ImageViewerModalProps {
 }
 
 const COMMON_RECOMMENDATIONS = [
-  'In-Person Slit Lamp Examination',
-  'Dilated Fundus Biomicroscopy',
-  'Urgent Ophthalmology Referral',
-  'Corneal Fluorescein Staining',
-  'Optical Coherence Tomography (OCT)',
-  'Visual Field Humphrey Testing',
-  'Intraocular Pressure (Tonometry) Check',
-  'Routine 12-Month Tele-Screening Follow-up',
+  'Schedule comprehensive slit-lamp biomicroscopy',
+  'Measure intraocular pressure (Tonometry)',
+  'Perform dilated fundus examination',
+  'Corneal topography and pachymetry',
+  'Visual field testing (Humphrey / Octopus)',
+  'Prescribe lubricating artificial tears for surface dryness',
+  'Routine annual vision screening',
+  'Urgent ophthalmologist referral indicated',
 ];
 
 export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
@@ -52,33 +63,41 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
   onClose,
   onImageUpdated,
 }) => {
-  const { user, role } = useAuth();
-  const isClinician = role === 'OPTOMETRIST' || role === 'ADMIN';
+  const { user } = useAuth();
+  const isClinician = user?.role === 'OPTOMETRIST' || user?.role === 'ADMIN';
 
-  // Navigation state
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // Navigation & Zoom states
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [zoom, setZoom] = useState<number>(1);
+  const [rotation, setRotation] = useState<number>(0);
 
-  // Transform controls
-  const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState(0);
-
-  // AI Modal info state
-  const [showAiModal, setShowAiModal] = useState(false);
-
-  // Optometrist Review Form state
-  const [reviewStatus, setReviewStatus] = useState<
-    'NORMAL' | 'SUSPECTED_PATHOLOGY' | 'INCONCLUSIVE' | 'POOR_IMAGE_QUALITY'
-  >('NORMAL');
-  const [observations, setObservations] = useState('');
+  // Review Form states
+  const [reviewStatus, setReviewStatus] = useState<'NORMAL' | 'SUSPECTED_PATHOLOGY' | 'INCONCLUSIVE' | 'POOR_IMAGE_QUALITY'>('NORMAL');
+  const [observations, setObservations] = useState<string>('');
   const [selectedRecommendations, setSelectedRecommendations] = useState<string[]>([]);
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState<boolean>(false);
+  const [reviewSuccess, setReviewSuccess] = useState<boolean>(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
-  const [reviewSuccess, setReviewSuccess] = useState(false);
 
-  // Find initial index
+  // EyeCapture AI states (Milestone 5.1: Anterior Quality & Segmentation)
+  const [aiAnalyses, setAiAnalyses] = useState<Record<string, EyeCaptureAiAnalysis>>({});
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [showOverlay, setShowOverlay] = useState<boolean>(true);
+  const [overlayOpacity, setOverlayOpacity] = useState<number>(0.65);
+
+  // Adnexal & Alignment Telemetry states (Milestone 5.2B: Ptosis & Strabismus)
+  const [adnexalAnalyses, setAdnexalAnalyses] = useState<Record<string, AdnexalTelemetryData>>({});
+  const [isAnalyzingAdnexa, setIsAnalyzingAdnexa] = useState<boolean>(false);
+
+  // Enlarged AI Studio Drawer states
+  const [showAiModal, setShowAiModal] = useState<boolean>(false);
+  const [activeAiTab, setActiveAiTab] = useState<'ANTERIOR' | 'ADNEXAL'>('ANTERIOR');
+
+  // Initialize index
   useEffect(() => {
     if (initialImageId && images.length > 0) {
-      const idx = images.findIndex((img) => img.imageId === initialImageId || img.id === initialImageId || img._id === initialImageId);
+      const idx = images.findIndex((img) => img.imageId === initialImageId || img.id === initialImageId);
       if (idx !== -1) setCurrentIndex(idx);
     }
   }, [initialImageId, images]);
@@ -87,95 +106,96 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
   useEffect(() => {
     setZoom(1);
     setRotation(0);
-    setReviewError(null);
     setReviewSuccess(false);
-    setObservations('');
+    setReviewError(null);
+    setAiError(null);
     setSelectedRecommendations([]);
+    setObservations('');
   }, [currentIndex]);
 
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
-
   const currentImage = images[currentIndex];
+  const currentAnalysis = currentImage ? aiAnalyses[currentImage.imageId] : undefined;
+  const currentAdnexal = currentImage ? adnexalAnalyses[currentImage.imageId] : undefined;
 
-  // Navigation handlers
-  const handlePrev = useCallback(() => {
-    if (images.length <= 1) return;
-    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
-  }, [images.length]);
+  // Run EyeCapture AI (Milestone 5.1 Anterior Quality & Segmentation)
+  const handleRunAiAnalysis = async (forceSegmentation = false) => {
+    if (!currentImage) return;
+    setIsAnalyzing(true);
+    setAiError(null);
 
-  const handleNext = useCallback(() => {
-    if (images.length <= 1) return;
-    setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
-  }, [images.length]);
+    try {
+      const result = await imagingApi.analyzeEyeWithAi({
+        imageId: currentImage.imageId,
+        forceSegmentation,
+      });
+
+      setAiAnalyses((prev) => ({
+        ...prev,
+        [currentImage.imageId]: result,
+      }));
+      setShowOverlay(true);
+    } catch (err: any) {
+      setAiError(err.message || 'EyeCapture AI analysis failed.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Run Adnexal & Alignment Telemetry (Milestone 5.2B Eyelid Margins, Ptosis & Strabismus)
+  const handleRunAdnexalAnalysis = async () => {
+    if (!currentImage) return;
+    setIsAnalyzingAdnexa(true);
+    setAiError(null);
+
+    try {
+      const result = await imagingApi.analyzeAdnexalAlignment({
+        imageId: currentImage.imageId,
+      });
+
+      setAdnexalAnalyses((prev) => ({
+        ...prev,
+        [currentImage.imageId]: result,
+      }));
+      setShowOverlay(true);
+    } catch (err: any) {
+      setAiError(err.message || 'Adnexal telemetry analysis failed.');
+    } finally {
+      setIsAnalyzingAdnexa(false);
+    }
+  };
 
   // Keyboard navigation
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!isOpen) return;
       if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowLeft') handlePrev();
       if (e.key === 'ArrowRight') handleNext();
-    };
+    },
+    [isOpen, currentIndex, images.length]
+  );
 
+  useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, handlePrev, handleNext]);
+  }, [handleKeyDown]);
 
   if (!isOpen || !currentImage) return null;
 
-  // Zoom controls
-  const handleZoomIn = () => setZoom((z) => Math.min(z + 0.25, 3.5));
-  const handleZoomOut = () => setZoom((z) => Math.max(z - 0.25, 0.5));
+  const handlePrev = () => {
+    setCurrentIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+  };
+
+  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 4));
+  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.5));
+  const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
   const handleFitScreen = () => {
     setZoom(1);
     setRotation(0);
-  };
-  const handleRotate = () => setRotation((r) => (r + 90) % 360);
-
-  // Format helpers
-  const getEyeBadge = (side: EyeSide) => {
-    switch (side) {
-      case 'RIGHT':
-        return <span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-400/30">Right Eye (OD)</span>;
-      case 'LEFT':
-        return <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">Left Eye (OS)</span>;
-      case 'BOTH':
-        return <span className="px-2 py-0.5 rounded text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-400/30">Both Eyes (OU)</span>;
-      default:
-        return <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-700 text-slate-300">Unspecified</span>;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'REVIEWED':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-            <CheckCircle className="w-3.5 h-3.5 mr-1" /> Reviewed
-          </span>
-        );
-      case 'REFERRAL_REQUIRED':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-            <AlertTriangle className="w-3.5 h-3.5 mr-1" /> Referral Required
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-            <Clock className="w-3.5 h-3.5 mr-1" /> Pending Review
-          </span>
-        );
-    }
   };
 
   const toggleRecommendation = (item: string) => {
@@ -186,15 +206,15 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setReviewError(null);
-    setReviewSuccess(false);
-
     if (!observations.trim()) {
-      setReviewError('Please provide clinical observations before signing off.');
+      setReviewError('Please enter clinical observation notes before submitting review.');
       return;
     }
 
     setIsSubmittingReview(true);
+    setReviewError(null);
+    setReviewSuccess(false);
+
     try {
       const updated = await imagingApi.reviewEyeImage(currentImage.imageId, {
         status: reviewStatus,
@@ -221,11 +241,37 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
     document.body.removeChild(link);
   };
 
+  const getEyeBadge = (side: EyeSide) => {
+    switch (side) {
+      case 'RIGHT':
+        return <span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-900 text-blue-200 border border-blue-700">Right Eye (OD)</span>;
+      case 'LEFT':
+        return <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-900 text-emerald-200 border border-emerald-700">Left Eye (OS)</span>;
+      case 'BOTH':
+        return <span className="px-2 py-0.5 rounded text-xs font-bold bg-purple-900 text-purple-200 border border-purple-700">Bilateral (OU)</span>;
+      default:
+        return <span className="px-2 py-0.5 rounded text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">{side}</span>;
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'REVIEWED':
+        return <span className="flex items-center gap-1 text-emerald-400 font-semibold text-xs bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-800"><CheckCircle className="w-3.5 h-3.5" /> Reviewed</span>;
+      case 'SUSPECTED_PATHOLOGY':
+        return <span className="flex items-center gap-1 text-rose-400 font-semibold text-xs bg-rose-950/80 px-2.5 py-1 rounded-full border border-rose-800"><AlertTriangle className="w-3.5 h-3.5" /> Suspected Pathology</span>;
+      case 'INCONCLUSIVE':
+        return <span className="flex items-center gap-1 text-amber-400 font-semibold text-xs bg-amber-950/80 px-2.5 py-1 rounded-full border border-amber-800"><Clock className="w-3.5 h-3.5" /> Inconclusive</span>;
+      default:
+        return <span className="flex items-center gap-1 text-blue-400 font-semibold text-xs bg-blue-950/80 px-2.5 py-1 rounded-full border border-blue-800"><Clock className="w-3.5 h-3.5" /> Pending Review</span>;
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fadeIn">
       
       {/* Top Bar */}
-      <div className="absolute top-0 left-0 right-0 h-16 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between px-6 z-20">
+      <div className="absolute top-0 left-0 right-0 h-16 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between px-6 z-20">
         
         {/* Left: Title & Index */}
         <div className="flex items-center space-x-4">
@@ -279,18 +325,81 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
           >
             <Maximize2 className="w-4 h-4" />
           </button>
+
+          {/* Overlay Quick Toggle */}
+          {((activeAiTab === 'ANTERIOR' && currentAnalysis?.segmentation?.overlay_rgba_base64) ||
+            (activeAiTab === 'ADNEXAL' && currentAdnexal?.overlay_rgba_base64)) && (
+            <>
+              <div className="h-4 w-px bg-slate-700 mx-1" />
+              <button
+                onClick={() => setShowOverlay(!showOverlay)}
+                title={showOverlay ? "Hide AI Overlay" : "Show AI Overlay"}
+                className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                  showOverlay
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>{showOverlay ? 'Overlay ON' : 'Overlay OFF'}</span>
+              </button>
+            </>
+          )}
         </div>
 
-        {/* Right: Actions & Close */}
-        <div className="flex items-center space-x-3">
+        {/* Right: Quick Action Buttons & Close */}
+        <div className="flex items-center space-x-2.5">
           
-          {/* AI Analysis Button (Informative) */}
+          {/* EyeCapture Anterior AI Top Button */}
           <button
-            onClick={() => setShowAiModal(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600/30 to-blue-600/30 hover:from-purple-600/50 hover:to-blue-600/50 border border-purple-500/40 text-purple-200 text-xs font-medium transition"
+            onClick={() => {
+              setActiveAiTab('ANTERIOR');
+              setShowAiModal(true);
+              if (!currentAnalysis && !isAnalyzing) {
+                handleRunAiAnalysis(false);
+              }
+            }}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold shadow-md transition ${
+              currentAnalysis?.quality?.status === 'USABLE_FOR_ANALYSIS'
+                ? 'bg-emerald-950/70 hover:bg-emerald-900 border-emerald-500/40 text-emerald-200'
+                : currentAnalysis?.quality?.status === 'RETAKE_RECOMMENDED'
+                ? 'bg-rose-950/70 hover:bg-rose-900 border-rose-500/40 text-rose-200'
+                : 'bg-gradient-to-r from-purple-600/40 to-indigo-600/40 hover:from-purple-600/60 hover:to-indigo-600/60 border-purple-500/40 text-purple-200'
+            }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-            <span>AI Analysis — Coming Soon</span>
+            <span>
+              {isAnalyzing
+                ? 'Analyzing...'
+                : currentAnalysis
+                ? `Anterior AI (${currentAnalysis.quality.overall_score}%)`
+                : 'Anterior AI'}
+            </span>
+          </button>
+
+          {/* Adnexal & Alignment Telemetry Top Button */}
+          <button
+            onClick={() => {
+              setActiveAiTab('ADNEXAL');
+              setShowAiModal(true);
+              if (!currentAdnexal && !isAnalyzingAdnexa) {
+                handleRunAdnexalAnalysis();
+              }
+            }}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold shadow-md transition ${
+              currentAdnexal
+                ? 'bg-cyan-950/70 hover:bg-cyan-900 border-cyan-500/40 text-cyan-200'
+                : 'bg-gradient-to-r from-cyan-600/40 to-blue-600/40 hover:from-cyan-600/60 hover:to-blue-600/60 border-cyan-500/40 text-cyan-200'
+            }`}
+          >
+            <Ruler className="w-3.5 h-3.5 text-cyan-400" />
+            <span>
+              {isAnalyzingAdnexa
+                ? 'Measuring...'
+                : currentAdnexal
+                ? `Adnexal Biometry (${currentAdnexal.mode === 'BILATERAL_FACE_LANDMARKER' ? 'Bilateral' : 'Macro'})`
+                : 'Adnexal Telemetry'}
+            </span>
           </button>
 
           {/* Download */}
@@ -312,7 +421,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
         </div>
       </div>
 
-      {/* Main Content Area: Image Canvas (Left) + Clinical Metadata/Review Panel (Right) */}
+      {/* Main Content Area: Image Canvas (Left) + Clinical Details Panel (Right) */}
       <div className="w-full h-full pt-16 flex flex-col lg:flex-row overflow-hidden">
         
         {/* Left: Image Canvas */}
@@ -329,19 +438,43 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
             </button>
           )}
 
-          {/* Main Image Container */}
+          {/* Main Image Container with Superimposed Pixel-Aligned Overlays */}
           <div className="w-full h-full flex items-center justify-center overflow-auto p-4">
-            <img
-              src={getAuthenticatedMediaUrl(currentImage.fileUrl)}
-              alt={`Eye Image ${currentImage.imageId}`}
+            <div
+              className="relative inline-block transition-transform duration-150 ease-out"
               style={{
                 transform: `scale(${zoom}) rotate(${rotation}deg)`,
-                transition: 'transform 0.15s ease-out',
                 maxHeight: '85vh',
                 maxWidth: '85vw',
               }}
-              className="object-contain rounded-lg shadow-2xl border border-slate-800 pointer-events-auto"
-            />
+            >
+              {/* Plaintext decrypted eye photograph */}
+              <img
+                src={getAuthenticatedMediaUrl(currentImage.fileUrl)}
+                alt={`Eye Image ${currentImage.imageId}`}
+                className="object-contain rounded-lg shadow-2xl border border-slate-800 max-h-[85vh] max-w-[85vw] block"
+              />
+
+              {/* Anatomy Segmentation Overlay (Milestone 5.1) */}
+              {showOverlay && activeAiTab === 'ANTERIOR' && currentAnalysis?.segmentation?.overlay_rgba_base64 && (
+                <img
+                  src={currentAnalysis.segmentation.overlay_rgba_base64}
+                  alt="EyeCapture AI Anatomical Segmentation Overlay"
+                  style={{ opacity: overlayOpacity }}
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none rounded-lg transition-opacity duration-200"
+                />
+              )}
+
+              {/* Pixel-Aligned RGBA Caliper Overlay (Milestone 5.2B) */}
+              {showOverlay && activeAiTab === 'ADNEXAL' && currentAdnexal?.overlay_rgba_base64 && (
+                <img
+                  src={currentAdnexal.overlay_rgba_base64}
+                  alt="EyeCapture AI Adnexal Alignment Overlay"
+                  style={{ opacity: overlayOpacity }}
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none rounded-lg transition-opacity duration-200"
+                />
+              )}
+            </div>
           </div>
 
           {/* Right Arrow */}
@@ -379,17 +512,17 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
           )}
         </div>
 
-        {/* Right: Metadata & Clinical Review Panel */}
+        {/* Right: DETAILS IMAGE PANEL (Metadata, AI Modules & Optometrist Review) */}
         <div className="w-full lg:w-96 bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-800 flex flex-col h-auto lg:h-full overflow-y-auto">
           
-          <div className="p-5 space-y-6">
+          <div className="p-5 space-y-5">
             
             {/* Header Status & Anatomical Badges */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   {getEyeBadge(currentImage.eyeSide)}
-                  <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                  <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-medium">
                     {currentImage.imageType.replace(/_/g, ' ')}
                   </span>
                 </div>
@@ -402,6 +535,333 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
                   <span className="text-slate-200 font-medium">
                     {currentImage.gazeDirection.replace(/_/g, ' ')}
                   </span>
+                </div>
+              )}
+            </div>
+
+            {/* Error Banner if any */}
+            {aiError && (
+              <div className="p-3 bg-red-950/60 border border-red-800/80 rounded-xl text-xs text-red-300 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />
+                <span>{aiError}</span>
+              </div>
+            )}
+
+            {/* MODULE 1: EyeCapture AI Inline Insights Panel (Anterior Quality & Segmentation) */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-purple-900/40 space-y-3 shadow-inner">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-200 flex items-center gap-1.5 text-xs">
+                  <Sparkles className="w-4 h-4 text-purple-400" />
+                  EyeCapture AI (Anterior Quality & Anatomy)
+                </span>
+                {currentAnalysis && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                    currentAnalysis.quality.status === 'USABLE_FOR_ANALYSIS'
+                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                      : currentAnalysis.quality.status === 'RETAKE_RECOMMENDED'
+                      ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                      : 'bg-amber-950 text-amber-300 border border-amber-800'
+                  }`}>
+                    {currentAnalysis.quality.status.replace(/_/g, ' ')}
+                  </span>
+                )}
+              </div>
+
+              {isAnalyzing ? (
+                <div className="p-3 bg-purple-950/40 rounded-lg border border-purple-800/60 flex items-center space-x-2 text-purple-300 text-xs">
+                  <Loader2 className="w-4 h-4 animate-spin text-purple-400 shrink-0" />
+                  <span>Evaluating image quality & segmenting ocular anatomy...</span>
+                </div>
+              ) : currentAnalysis ? (
+                <div className="space-y-3 text-xs">
+                  {/* Score Meter */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-slate-400">Capture Suitability Score:</span>
+                      <span className="font-bold text-white font-mono">{currentAnalysis.quality.overall_score} / 100</span>
+                    </div>
+                    <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 ${
+                          currentAnalysis.quality.overall_score >= 68
+                            ? 'bg-emerald-500'
+                            : currentAnalysis.quality.overall_score >= 48
+                            ? 'bg-amber-500'
+                            : 'bg-rose-500'
+                        }`}
+                        style={{ width: `${currentAnalysis.quality.overall_score}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Metric Pills */}
+                  <div className="grid grid-cols-3 gap-1.5 text-[10px] font-mono text-center">
+                    <div className="p-1.5 bg-slate-900 rounded border border-slate-800">
+                      <span className="text-slate-500 block text-[9px]">Sharpness</span>
+                      <span className="text-slate-200 font-bold">{currentAnalysis.quality.sharpness_score}%</span>
+                    </div>
+                    <div className="p-1.5 bg-slate-900 rounded border border-slate-800">
+                      <span className="text-slate-500 block text-[9px]">Exposure</span>
+                      <span className="text-slate-200 font-bold">{currentAnalysis.quality.exposure_score}%</span>
+                    </div>
+                    <div className="p-1.5 bg-slate-900 rounded border border-slate-800">
+                      <span className="text-slate-500 block text-[9px]">Contrast</span>
+                      <span className="text-slate-200 font-bold">{currentAnalysis.quality.contrast_score}%</span>
+                    </div>
+                  </div>
+
+                  {/* Recapture Tips if degraded */}
+                  {currentAnalysis.quality.recapture_guidance && currentAnalysis.quality.recapture_guidance.length > 0 && (
+                    <div className="p-2.5 bg-rose-950/40 rounded-lg border border-rose-900/60 space-y-1">
+                      <span className="text-[10px] font-bold text-rose-300 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 text-rose-400" /> Quality Warnings:
+                      </span>
+                      <ul className="list-disc list-inside text-[10px] text-rose-200/90 space-y-0.5">
+                        {currentAnalysis.quality.recapture_guidance.map((tip, idx) => (
+                          <li key={idx}>{tip}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Anatomy Segmentation Controls & Telemetry */}
+                  {currentAnalysis.segmentation && (
+                    <div className="space-y-2 pt-2 border-t border-slate-800">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <label className="flex items-center space-x-1.5 cursor-pointer text-slate-300">
+                          <input
+                            type="checkbox"
+                            checked={showOverlay && activeAiTab === 'ANTERIOR'}
+                            onChange={(e) => {
+                              setActiveAiTab('ANTERIOR');
+                              setShowOverlay(e.target.checked);
+                            }}
+                            className="rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0"
+                          />
+                          <span>Show Anatomy Overlay</span>
+                        </label>
+                        <div className="flex items-center space-x-1 text-[10px] text-slate-400">
+                          <span>Alpha:</span>
+                          <input
+                            type="range"
+                            min="0.2"
+                            max="1.0"
+                            step="0.05"
+                            value={overlayOpacity}
+                            onChange={(e) => setOverlayOpacity(parseFloat(e.target.value))}
+                            className="w-14 accent-cyan-500 h-1 bg-slate-800 rounded-lg cursor-pointer"
+                          />
+                          <span className="w-6 font-mono">{Math.round(overlayOpacity * 100)}%</span>
+                        </div>
+                      </div>
+
+                      {/* Class Legend */}
+                      <div className="grid grid-cols-3 gap-1 text-[10px] text-center">
+                        <div className="p-1 rounded bg-[#00dcff]/10 text-[#00dcff] border border-[#00dcff]/30 font-semibold">
+                          Sclera ({currentAnalysis.segmentation.coverage.sclera_pct}%)
+                        </div>
+                        <div className="p-1 rounded bg-[#10d778]/10 text-[#10d778] border border-[#10d778]/30 font-semibold">
+                          Iris ({currentAnalysis.segmentation.coverage.iris_pct}%)
+                        </div>
+                        <div className="p-1 rounded bg-[#ff2d55]/10 text-[#ff2d55] border border-[#ff2d55]/30 font-semibold">
+                          Pupil ({currentAnalysis.segmentation.coverage.pupil_pct}%)
+                        </div>
+                      </div>
+
+                      {/* Telemetry Indicator */}
+                      <div className="p-2 bg-slate-900 rounded-lg border border-slate-800 flex items-center justify-between text-[10px]">
+                        <span className="text-slate-400">Pupil/Iris Ratio:</span>
+                        <span className="font-mono font-bold text-emerald-400">
+                          {currentAnalysis.segmentation.telemetry.pupil_to_iris_ratio} ({currentAnalysis.segmentation.telemetry.pupillary_symmetry_flag})
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Re-analyze or Details button */}
+                  <div className="pt-1 flex items-center justify-between">
+                    <button
+                      onClick={() => handleRunAiAnalysis(false)}
+                      className="text-[11px] text-purple-400 hover:text-purple-300 font-medium flex items-center gap-1 transition"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Re-check Anterior Image
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveAiTab('ANTERIOR');
+                        setShowAiModal(true);
+                      }}
+                      className="text-[11px] text-slate-400 hover:text-white font-medium underline transition"
+                    >
+                      Enlarge AI Studio
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-[11px] text-slate-400">
+                    Analyze sharpness, exposure, glare, and anterior anatomy with EyeCapture AI.
+                  </p>
+                  <button
+                    onClick={() => handleRunAiAnalysis(false)}
+                    className="w-full py-2 px-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition flex items-center justify-center space-x-1.5 shadow"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Run EyeCapture AI Analysis</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* MODULE 2: Adnexal & Alignment Telemetry Inline Panel (Milestone 5.2B Ptosis & Strabismus) */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-cyan-900/40 space-y-3 shadow-inner">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-200 flex items-center gap-1.5 text-xs">
+                  <Ruler className="w-4 h-4 text-cyan-400" />
+                  Adnexal & Alignment Telemetry
+                </span>
+                {currentAdnexal && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800 font-semibold">
+                    {currentAdnexal.mode === 'BILATERAL_FACE_LANDMARKER' ? 'BILATERAL MESH' : 'MACRO CALIPERS'}
+                  </span>
+                )}
+              </div>
+
+              {isAnalyzingAdnexa ? (
+                <div className="p-3 bg-cyan-950/40 rounded-lg border border-cyan-800/60 flex items-center space-x-2 text-cyan-300 text-xs">
+                  <Loader2 className="w-4 h-4 animate-spin text-cyan-400 shrink-0" />
+                  <span>Measuring eyelid margins (MRD1/MRD2), PFH & alignment...</span>
+                </div>
+              ) : currentAdnexal ? (
+                <div className="space-y-3 text-xs">
+                  {/* Caliper Summary Cards */}
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    {currentAdnexal.right_eye ? (
+                      <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
+                        <span className="text-blue-300 font-bold block text-[10px] flex items-center gap-1">
+                          <Crosshair className="w-3 h-3 text-blue-400" /> Right Eye (OD)
+                        </span>
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-slate-400">MRD1:</span>
+                          <span className="font-mono text-white font-bold">{currentAdnexal.right_eye.estimated_mrd1_mm} mm</span>
+                        </div>
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-slate-400">MRD2:</span>
+                          <span className="font-mono text-white font-bold">{currentAdnexal.right_eye.estimated_mrd2_mm} mm</span>
+                        </div>
+                        <div className="flex justify-between text-[10px] pt-1 border-t border-slate-800">
+                          <span className="text-slate-300 font-semibold">PFH:</span>
+                          <span className="font-mono text-cyan-300 font-bold">{currentAdnexal.right_eye.estimated_pfh_mm} mm</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 bg-slate-900/60 rounded-lg border border-slate-800/80 flex flex-col justify-center items-center text-center">
+                        <span className="text-[10px] text-slate-400 font-medium">Right Eye (OD)</span>
+                        <span className="text-[9px] text-slate-500 mt-0.5">Not in crop</span>
+                      </div>
+                    )}
+
+                    {currentAdnexal.left_eye ? (
+                      <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
+                        <span className="text-emerald-300 font-bold block text-[10px] flex items-center gap-1">
+                          <Crosshair className="w-3 h-3 text-emerald-400" /> Left Eye (OS)
+                        </span>
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-slate-400">MRD1:</span>
+                          <span className="font-mono text-white font-bold">{currentAdnexal.left_eye.estimated_mrd1_mm} mm</span>
+                        </div>
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-slate-400">MRD2:</span>
+                          <span className="font-mono text-white font-bold">{currentAdnexal.left_eye.estimated_mrd2_mm} mm</span>
+                        </div>
+                        <div className="flex justify-between text-[10px] pt-1 border-t border-slate-800">
+                          <span className="text-slate-300 font-semibold">PFH:</span>
+                          <span className="font-mono text-cyan-300 font-bold">{currentAdnexal.left_eye.estimated_pfh_mm} mm</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-2.5 bg-slate-900/60 rounded-lg border border-slate-800/80 flex flex-col justify-center items-center text-center">
+                        <span className="text-[10px] text-slate-400 font-medium">Left Eye (OS)</span>
+                        <span className="text-[9px] text-slate-500 mt-0.5">Not in crop</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Telemetry Status Row */}
+                  <div className="grid grid-cols-2 gap-2 text-[10px]">
+                    <div className="p-2 bg-slate-900 rounded-lg border border-slate-800 flex items-center justify-between">
+                      <span className="text-slate-400">Ptosis:</span>
+                      <span className={`px-1.5 py-0.5 rounded font-bold ${
+                        currentAdnexal.potential_ptosis
+                          ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                          : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                      }`}>
+                        {currentAdnexal.potential_ptosis ? `Alert (${currentAdnexal.potential_ptosis_eye})` : 'Normal Limits'}
+                      </span>
+                    </div>
+
+                    <div className="p-2 bg-slate-900 rounded-lg border border-slate-800 flex items-center justify-between">
+                      <span className="text-slate-400">Alignment:</span>
+                      <span className={`px-1.5 py-0.5 rounded font-bold ${
+                        currentAdnexal.strabismus_screening.strabismus_suspected
+                          ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                          : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                      }`}>
+                        {currentAdnexal.strabismus_screening.strabismus_suspected ? 'Suspicion' : 'Orthophoric'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Overlay Toggle */}
+                  {currentAdnexal.overlay_rgba_base64 && (
+                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800">
+                      <label className="flex items-center space-x-1.5 cursor-pointer text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={showOverlay && activeAiTab === 'ADNEXAL'}
+                          onChange={(e) => {
+                            setActiveAiTab('ADNEXAL');
+                            setShowOverlay(e.target.checked);
+                          }}
+                          className="rounded bg-slate-800 border-slate-700 text-cyan-500 focus:ring-0"
+                        />
+                        <span>Show Caliper Overlay</span>
+                      </label>
+                      <span className="text-[10px] text-cyan-400 font-mono">11.7mm Iris Ref</span>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="pt-1 flex items-center justify-between">
+                    <button
+                      onClick={handleRunAdnexalAnalysis}
+                      className="text-[11px] text-cyan-400 hover:text-cyan-300 font-medium flex items-center gap-1 transition"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Re-measure Adnexa
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveAiTab('ADNEXAL');
+                        setShowAiModal(true);
+                      }}
+                      className="text-[11px] text-slate-400 hover:text-white font-medium underline transition"
+                    >
+                      Enlarge Biometry Studio
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-[11px] text-slate-400">
+                    Quantify palpebral fissure height (PFH), margin reflex distances (MRD1/MRD2), and optical axis alignment.
+                  </p>
+                  <button
+                    onClick={handleRunAdnexalAnalysis}
+                    className="w-full py-2 px-3 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs transition flex items-center justify-center space-x-1.5 shadow"
+                  >
+                    <Ruler className="w-3.5 h-3.5" />
+                    <span>Run Adnexal Telemetry Analysis</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -625,59 +1085,415 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
         </div>
       </div>
 
-      {/* AI Analysis — Coming Soon Modal */}
+      {/* Enlarged EyeCapture AI Studio Modal Drawer */}
       {showAiModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 text-white shadow-2xl relative">
-            <button
-              onClick={() => setShowAiModal(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
-            >
-              <X className="w-5 h-5" />
-            </button>
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 text-white shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-purple-400">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    VisionBridge EyeCapture AI Studio
+                  </h3>
+                  <span className="text-xs text-slate-400 font-mono">
+                    Target Image: {currentImage.imageId} ({currentImage.eyeSide})
+                  </span>
+                </div>
+              </div>
 
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-purple-400">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-white">
-                  Automated AI Image Analysis
-                </h3>
-                <span className="text-xs font-semibold text-purple-400 bg-purple-950/80 px-2 py-0.5 rounded-full border border-purple-800/60">
-                  Architectural Roadmap · Planned Milestone
-                </span>
-              </div>
+              <button
+                onClick={() => setShowAiModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
-              <p>
-                VisionBridge is designed with safety, rigor, and clinical accountability. No automated diagnostic AI model is active in the current deployment.
-              </p>
+            {/* TAB SELECTOR: Anterior AI vs Adnexal Telemetry */}
+            <div className="flex items-center space-x-2 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-5">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveAiTab('ANTERIOR');
+                  if (!currentAnalysis && !isAnalyzing) {
+                    handleRunAiAnalysis(false);
+                  }
+                }}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-2 ${
+                  activeAiTab === 'ANTERIOR'
+                    ? 'bg-purple-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Anterior Anatomy (Sclera/Iris/Pupil)</span>
+              </button>
 
-              <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
-                <span className="font-semibold text-slate-200">Current Standard of Care:</span>
-                <p className="text-slate-400">
-                  All clinical photographs are evaluated manually by licensed optometrists and tele-ophthalmologists. Zero fabricated AI confidence scores or mock predictions are generated.
-                </p>
-              </div>
-
-              <div className="p-3 bg-purple-950/30 rounded-xl border border-purple-900/50 space-y-2">
-                <span className="font-semibold text-purple-300">Upcoming Multi-Modal AI Pipeline:</span>
-                <ul className="list-disc list-inside text-slate-400 space-y-1">
-                  <li><strong className="text-slate-200">Anterior Segment Quality Filter:</strong> Blur & illumination detection on mobile lenses.</li>
-                  <li><strong className="text-slate-200">Fundus Triage Microservice:</strong> Cup-to-disc ratio & diabetic retinopathy screening.</li>
-                  <li><strong className="text-slate-200">Edge-Preserving Privacy:</strong> Local anonymization conforming to HIPAA / GDPR health data boundaries.</li>
-                </ul>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveAiTab('ADNEXAL');
+                  if (!currentAdnexal && !isAnalyzingAdnexa) {
+                    handleRunAdnexalAnalysis();
+                  }
+                }}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-2 ${
+                  activeAiTab === 'ADNEXAL'
+                    ? 'bg-cyan-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
+              >
+                <Ruler className="w-3.5 h-3.5" />
+                <span>Adnexal & Alignment (Ptosis/Strabismus)</span>
+              </button>
             </div>
 
-            <div className="mt-5 pt-4 border-t border-slate-800 flex justify-end">
+            {/* TAB 1: ANTERIOR QUALITY & SEGMENTATION */}
+            {activeAiTab === 'ANTERIOR' && (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-purple-400">
+                    Ocular Image Quality & Semantic Segmentation
+                  </span>
+                  <button
+                    onClick={() => handleRunAiAnalysis(false)}
+                    disabled={isAnalyzing}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-200 font-semibold transition flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-spin' : ''}`} />
+                    <span>{currentAnalysis ? 'Re-Run Quality & Segmentation' : 'Run Anterior Analysis'}</span>
+                  </button>
+                </div>
+
+                {isAnalyzing ? (
+                  <div className="p-8 text-center space-y-3 bg-slate-950 rounded-2xl border border-slate-800">
+                    <Loader2 className="w-8 h-8 animate-spin text-purple-400 mx-auto" />
+                    <p className="text-sm font-semibold text-slate-200">Processing anterior eye photograph...</p>
+                    <p className="text-xs text-slate-400">Measuring focus gradient, illumination balance, and segmenting corneal regions.</p>
+                  </div>
+                ) : currentAnalysis ? (
+                  <div className="space-y-4">
+                    {/* Quality Summary */}
+                    <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-200 text-xs">Pre-Analysis Image Quality</span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          currentAnalysis.quality.status === 'USABLE_FOR_ANALYSIS'
+                            ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                            : currentAnalysis.quality.status === 'RETAKE_RECOMMENDED'
+                            ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                            : 'bg-amber-950 text-amber-300 border border-amber-800'
+                        }`}>
+                          {currentAnalysis.quality.status.replace(/_/g, ' ')} ({currentAnalysis.quality.overall_score}/100)
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono">
+                        <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">
+                          <span className="text-slate-400 text-[10px] block">Laplacian Sharpness</span>
+                          <span className="text-white font-bold">{currentAnalysis.quality.sharpness_score}%</span>
+                        </div>
+                        <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">
+                          <span className="text-slate-400 text-[10px] block">Illumination Uniformity</span>
+                          <span className="text-white font-bold">{currentAnalysis.quality.exposure_score}%</span>
+                        </div>
+                        <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">
+                          <span className="text-slate-400 text-[10px] block">RMS Contrast</span>
+                          <span className="text-white font-bold">{currentAnalysis.quality.contrast_score}%</span>
+                        </div>
+                      </div>
+
+                      {currentAnalysis.quality.recapture_guidance.length > 0 && (
+                        <div className="p-3 bg-amber-950/30 rounded-xl border border-amber-800/40 text-xs text-amber-200/90 space-y-1">
+                          <span className="font-bold flex items-center gap-1.5 text-amber-300">
+                            <Lightbulb className="w-3.5 h-3.5" /> Recapture Optimization Tips:
+                          </span>
+                          <ul className="list-disc list-inside space-y-0.5 pl-1">
+                            {currentAnalysis.quality.recapture_guidance.map((g, idx) => (
+                              <li key={idx}>{g}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Anatomy Segmentation Telemetry */}
+                    {currentAnalysis.segmentation ? (
+                      <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-200 text-xs">Anterior Semantic Segmentation Telemetry</span>
+                          <span className="text-[10px] font-mono text-slate-400">{currentAnalysis.segmentation.inference_method}</span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                          <div className="p-2.5 rounded-lg bg-[#00dcff]/10 text-[#00dcff] border border-[#00dcff]/30">
+                            <span className="block text-[10px] text-slate-300 font-medium">Sclera Coverage</span>
+                            <span className="text-base font-bold font-mono">{currentAnalysis.segmentation.coverage.sclera_pct}%</span>
+                          </div>
+                          <div className="p-2.5 rounded-lg bg-[#10d778]/10 text-[#10d778] border border-[#10d778]/30">
+                            <span className="block text-[10px] text-slate-300 font-medium">Iris Coverage</span>
+                            <span className="text-base font-bold font-mono">{currentAnalysis.segmentation.coverage.iris_pct}%</span>
+                          </div>
+                          <div className="p-2.5 rounded-lg bg-[#ff2d55]/10 text-[#ff2d55] border border-[#ff2d55]/30">
+                            <span className="block text-[10px] text-slate-300 font-medium">Pupil Coverage</span>
+                            <span className="text-base font-bold font-mono">{currentAnalysis.segmentation.coverage.pupil_pct}%</span>
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Pupil-to-Iris Diameter Ratio:</span>
+                            <span className="font-mono text-white font-bold">{currentAnalysis.segmentation.telemetry.pupil_to_iris_ratio}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Pupillary Ambient Symmetry Flag:</span>
+                            <span className="font-mono text-emerald-400 font-bold">{currentAnalysis.segmentation.telemetry.pupillary_symmetry_flag}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-center space-y-2">
+                        <p className="text-xs text-slate-400">Segmentation bypassed due to poor image quality assessment.</p>
+                        <button
+                          onClick={() => handleRunAiAnalysis(true)}
+                          className="px-3 py-1.5 rounded-lg bg-purple-600 text-white font-semibold text-xs"
+                        >
+                          Force Segmentation Anyway
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center space-y-3 bg-slate-950 rounded-2xl border border-slate-800">
+                    <p className="text-xs text-slate-400">No anterior analysis performed yet for this photograph.</p>
+                    <button
+                      onClick={() => handleRunAiAnalysis(false)}
+                      className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs"
+                    >
+                      Run EyeCapture AI Analysis
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: ADNEXAL & ALIGNMENT TELEMETRY (MILESTONE 5.2B) */}
+            {activeAiTab === 'ADNEXAL' && (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-cyan-400">
+                    Ocular Adnexa, Ptosis Calipers & Strabismus Alignment
+                  </span>
+                  <button
+                    onClick={handleRunAdnexalAnalysis}
+                    disabled={isAnalyzingAdnexa}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-500/40 text-cyan-200 font-semibold transition flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isAnalyzingAdnexa ? 'animate-spin' : ''}`} />
+                    <span>{currentAdnexal ? 'Re-Measure Adnexa' : 'Run Adnexal Telemetry'}</span>
+                  </button>
+                </div>
+
+                {isAnalyzingAdnexa ? (
+                  <div className="p-8 text-center space-y-3 bg-slate-950 rounded-2xl border border-slate-800">
+                    <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mx-auto" />
+                    <p className="text-sm font-semibold text-slate-200">Extracting ocular landmarks & eyelid margins...</p>
+                    <p className="text-xs text-slate-400">Evaluating Palpebral Fissure Height, MRD1/MRD2, and Hirschberg optical reflex.</p>
+                  </div>
+                ) : currentAdnexal && currentAdnexal.detected ? (
+                  <div className="space-y-4">
+                    
+                    {/* Operational Mode Header */}
+                    <div className="flex items-center justify-between p-3 bg-slate-950 rounded-xl border border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <Ruler className="w-4 h-4 text-cyan-400" />
+                        <span className="font-bold text-slate-200 text-xs">Adnexal Biometry Status</span>
+                      </div>
+                      <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800 font-semibold">
+                        {currentAdnexal.mode || 'UNILATERAL_MACRO_CLOSEUP'}
+                      </span>
+                    </div>
+
+                    {/* Calipers Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      
+                      {/* Right Eye (OD) */}
+                      {currentAdnexal.right_eye ? (
+                        <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                          <div className="flex items-center justify-between pb-1.5 border-b border-slate-800">
+                            <span className="font-bold text-blue-300 flex items-center gap-1.5 text-xs">
+                              <Crosshair className="w-3.5 h-3.5 text-blue-400" />
+                              Right Eye (OD) Calipers
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">
+                              Iris Ø: {currentAdnexal.right_eye.iris_diameter_px}px
+                            </span>
+                          </div>
+                          <div className="space-y-1.5 text-[11px]">
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">MRD1 (Upper margin):</span>
+                              <span className="font-mono text-white font-bold">{currentAdnexal.right_eye.estimated_mrd1_mm} mm <span className="text-slate-500 font-normal">({currentAdnexal.right_eye.mrd1_px}px)</span></span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">MRD2 (Lower margin):</span>
+                              <span className="font-mono text-white font-bold">{currentAdnexal.right_eye.estimated_mrd2_mm} mm <span className="text-slate-500 font-normal">({currentAdnexal.right_eye.mrd2_px}px)</span></span>
+                            </div>
+                            <div className="flex justify-between pt-1 border-t border-slate-800/60">
+                              <span className="text-slate-300 font-semibold">Palpebral Fissure (PFH):</span>
+                              <span className="font-mono text-cyan-300 font-bold">{currentAdnexal.right_eye.estimated_pfh_mm} mm</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/60 flex flex-col justify-center items-center text-center p-4">
+                          <span className="text-xs font-semibold text-slate-400 mb-1">Right Eye (OD) Not in Frame</span>
+                          <span className="text-[11px] text-slate-500">Contralateral eye not captured in this single-eye macro view.</span>
+                        </div>
+                      )}
+
+                      {/* Left Eye (OS) */}
+                      {currentAdnexal.left_eye ? (
+                        <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                          <div className="flex items-center justify-between pb-1.5 border-b border-slate-800">
+                            <span className="font-bold text-emerald-300 flex items-center gap-1.5 text-xs">
+                              <Crosshair className="w-3.5 h-3.5 text-emerald-400" />
+                              Left Eye (OS) Calipers
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">
+                              Iris Ø: {currentAdnexal.left_eye.iris_diameter_px}px
+                            </span>
+                          </div>
+                          <div className="space-y-1.5 text-[11px]">
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">MRD1 (Upper margin):</span>
+                              <span className="font-mono text-white font-bold">{currentAdnexal.left_eye.estimated_mrd1_mm} mm <span className="text-slate-500 font-normal">({currentAdnexal.left_eye.mrd1_px}px)</span></span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">MRD2 (Lower margin):</span>
+                              <span className="font-mono text-white font-bold">{currentAdnexal.left_eye.estimated_mrd2_mm} mm <span className="text-slate-500 font-normal">({currentAdnexal.left_eye.mrd2_px}px)</span></span>
+                            </div>
+                            <div className="flex justify-between pt-1 border-t border-slate-800/60">
+                              <span className="text-slate-300 font-semibold">Palpebral Fissure (PFH):</span>
+                              <span className="font-mono text-cyan-300 font-bold">{currentAdnexal.left_eye.estimated_pfh_mm} mm</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/60 flex flex-col justify-center items-center text-center p-4">
+                          <span className="text-xs font-semibold text-slate-400 mb-1">Left Eye (OS) Not in Frame</span>
+                          <span className="text-[11px] text-slate-500">Contralateral eye not captured in this single-eye macro view.</span>
+                        </div>
+                      )}
+
+                    </div>
+
+                    {/* Ptosis Asymmetry & Strabismus Indicators */}
+                    <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                      <span className="font-bold text-slate-200 block text-xs">
+                        Adnexal Screening Telemetry (Ptosis & Strabismus)
+                      </span>
+
+                      <div className="grid grid-cols-2 gap-3 text-[11px]">
+                        <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
+                          <span className="text-slate-400 block text-[10px]">PFH Asymmetry</span>
+                          <span className="font-mono text-white font-bold text-sm">
+                            {currentAdnexal.pfh_asymmetry_pct !== null && currentAdnexal.pfh_asymmetry_pct !== undefined
+                              ? `${currentAdnexal.pfh_asymmetry_pct}%`
+                              : 'N/A (Single Eye)'}
+                          </span>
+                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                            currentAdnexal.pfh_asymmetry_pct === null || currentAdnexal.pfh_asymmetry_pct === undefined
+                              ? 'bg-slate-800 text-slate-300 border border-slate-700'
+                              : currentAdnexal.potential_ptosis
+                              ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                              : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                          }`}>
+                            {currentAdnexal.pfh_asymmetry_pct === null || currentAdnexal.pfh_asymmetry_pct === undefined
+                              ? 'Dual-Eye Portrait Required'
+                              : currentAdnexal.potential_ptosis
+                              ? `Ptosis: ${currentAdnexal.potential_ptosis_eye}`
+                              : 'Symmetric (<15%)'}
+                          </span>
+                        </div>
+
+                        <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
+                          <span className="text-slate-400 block text-[10px]">Interpupillary Distance</span>
+                          <span className="font-mono text-white font-bold text-sm">
+                            {currentAdnexal.estimated_ipd_mm > 0 ? `${currentAdnexal.estimated_ipd_mm} mm` : 'N/A (Macro)'}
+                          </span>
+                          <span className="text-[10px] text-slate-400 block font-mono">
+                            Ref: 11.7mm Iris Ø
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Strabismus Hirschberg Indicator */}
+                      <div className="p-3 bg-slate-900 rounded-lg border border-slate-800 space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-300 font-semibold text-[11px]">Hirschberg Corneal Light Reflex:</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            currentAdnexal.strabismus_screening.strabismus_suspected
+                              ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                              : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                          }`}>
+                            {currentAdnexal.strabismus_screening.strabismus_suspected ? 'Misalignment Suspicion' : 'Orthophoric Symmetrical'}
+                          </span>
+                        </div>
+                        <p className="text-slate-400 text-[11px] leading-relaxed">
+                          {currentAdnexal.strabismus_screening.gaze_alignment_description}
+                        </p>
+                      </div>
+
+                      {/* Image Type Guidance Hint */}
+                      <div className="p-2.5 bg-blue-950/40 rounded-lg border border-blue-900/60 text-[11px] text-blue-200/90 leading-relaxed">
+                        <span className="font-semibold text-blue-300 block mb-0.5">💡 Clinical Image Hint:</span>
+                        For <strong>bilateral ptosis asymmetry</strong> and <strong>Hirschberg strabismus screening</strong>, upload a full frontal face portrait (both eyes visible). For <strong>eyelid margin biometry</strong> (MRD1/MRD2/PFH), close-up single-eye photos are automatically calibrated against the 11.7mm anatomical corneal diameter standard.
+                      </div>
+
+                      {/* Clinical Recommendations */}
+                      {currentAdnexal.clinical_recommendations && currentAdnexal.clinical_recommendations.length > 0 && (
+                        <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1.5 text-xs">
+                          <span className="font-bold text-slate-200 text-[11px] block">
+                            Optometrist Assessment Guidance:
+                          </span>
+                          <ul className="list-disc list-inside text-slate-300 text-[11px] space-y-0.5">
+                            {currentAdnexal.clinical_recommendations.map((rec, idx) => (
+                              <li key={idx}>{rec}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center space-y-3 bg-slate-950 rounded-2xl border border-slate-800">
+                    <p className="text-xs text-slate-400">No adnexal biometry telemetry performed yet for this photograph.</p>
+                    <button
+                      onClick={handleRunAdnexalAnalysis}
+                      className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs"
+                    >
+                      Run Adnexal Telemetry Analysis
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Modal Footer */}
+            <div className="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-500">
+              <span className="italic">
+                VisionBridge EyeCapture AI provides non-diagnostic clinical decision support only.
+              </span>
               <button
                 onClick={() => setShowAiModal(false)}
                 className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white transition"
               >
-                Understood
+                Close Studio
               </button>
             </div>
           </div>
