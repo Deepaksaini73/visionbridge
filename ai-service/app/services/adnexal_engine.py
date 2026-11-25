@@ -21,9 +21,16 @@ import numpy as np
 import cv2
 from PIL import Image
 
-import mediapipe as mp
-from mediapipe.tasks.python import vision
-from mediapipe.tasks.python import BaseOptions
+try:
+    import mediapipe as mp
+    from mediapipe.tasks.python import vision
+    from mediapipe.tasks.python import BaseOptions
+    HAS_MEDIAPIPE = True
+except Exception as _mp_err:
+    mp = None
+    vision = None
+    BaseOptions = None
+    HAS_MEDIAPIPE = False
 
 from app.services.segmentation_engine import (
     get_segmentation_engine,
@@ -78,6 +85,10 @@ class AdnexalAlignmentEngine:
         self._init_landmarker()
 
     def _init_landmarker(self):
+        if not HAS_MEDIAPIPE or vision is None or BaseOptions is None:
+            logger.info("MediaPipe not available. Operating in robust macro fallback mode.")
+            return
+
         if not self.model_path.exists():
             logger.warning(f"MediaPipe task model not found at {self.model_path}. MediaPipe mode disabled.")
             return
