@@ -47,13 +47,25 @@ VisionBridge is a voice-first, AI-assisted preliminary vision-screening and tele
 - **🛡️ Multi-Tenant Store Isolation & RBAC**
   - Strict data isolation between partner optical store centers (Chittoor, Madanapalle, Tirupati).
   - Role-based permissions:
-    - **Store Operator**: Scoped strictly to their designated optical store; can register customers and record screenings.
-    - **Optometrist**: Network-wide clinical reviewer; can inspect raw telemetry, view encrypted eye images, sign off reviews, and issue formal referrals.
+    - **Store Operator**: Scoped strictly to their designated optical store; can register customers, record voice interviews, conduct preliminary acuity screenings, and download complete clinical PDF reports.
+    - **Optometrist**: Network-wide tele-review console; connected directly to live MongoDB database queue (`GET /api/reviews/queue`); reviews raw telemetry (Tumbling-E, Amsler), inspects encrypted eye images, signs off clinical notes (`POST /api/reviews/:caseId/decision`), and issues formal hospital referrals.
     - **Administrator**: System-wide governance, account provisioning, and optical center registration.
+
+- **📄 Comprehensive Clinical PDF Report Engine (Milestone 5.6)**
+  - Print-optimized A4 clinical reports covering all 5 modules: Customer Demographics, Calibration & Test Validity, Visual Acuity (OD / OS) logMAR & Snellen scores, Near Vision & Presbyopia, Amsler Grid Macular Distortion, Contrast Sensitivity, Colour Vision, Clinical Eye Photographs, Operator Observations, and Optometrist Clinical Decision & Digital Sign-off Block.
+  - Multi-source tokenized streaming (`req.headers.authorization`, `?token=<jwt>`, and session cookie `vb_auth_token`) enabling direct 1-click downloads and prints without 401 Unauthorized errors.
+  - Universal Customer Report resolution endpoint (`GET /api/customers/:id/report`) automatically linking to the latest screening.
 
 - **⚡ Offline-First Architecture**
   - Client-side IndexedDB database (via Dexie.js) allows full screening operation when internet is unavailable.
   - Automatic synchronization with the cloud backend when connectivity is restored.
+
+- **🤖 VisionBridge AI & Computer Vision Microservice**
+  - **EyeCapture AI (Milestone 5.1)**: Pre-capture quality scoring (Laplacian sharpness, illumination uniformity, glare saturation) and 4-class anterior segmentation (Sclera, Iris, Pupil, Periocular).
+  - **Adnexal & Alignment Telemetry (Milestone 5.2B)**: Dual-engine ptosis screening (MRD1, MRD2, Palpebral Fissure Height), IPD metric scaling via 11.7mm iris standard, and Hirschberg corneal reflex optical alignment.
+  - **Conjunctival Hyperaemia & Pterygium Screening (Milestone 5.3)**: Scleral microvascular density extraction mapped to the international Efron grading scale (0–4) and corneal limbus encroachment detection.
+  - **VisionBridge Retinal AI Foundation (Milestone 5.4 FLAIR)**: Zero-shot contrastive vision-language representation (Bio_ClinicalBERT + ResNet-50, 133.26M params) evaluating Color Fundus Photography (CFP) across Diabetic Retinopathy (5 stages), Macular Pathologies (DME, Macular Hole, AMD), Glaucomatous Disc Cupping, and Retinal Vascular Occlusions, paired with automated clinical triage urgency routing (`ROUTINE`, `ELECTIVE_CONSULT`, `URGENT_REFERRAL`).
+  - **Lens & Corneal Clarity Engine (Milestone 5.5)**: Crystalline lens pupillary light transmission and Shannon entropy texture profiling (WHO/LOCS III cataract proxy Grades 0–3) and 360° radial limbal arcus senilis lipid ring biometry.
 
 - **🎨 Modern Healthcare SaaS Interface**
   - Responsive layout inspired by the *Eye Sight* optical UI kit and clean *Whitespace* healthcare SaaS patterns.
@@ -202,11 +214,34 @@ On the Login page ([http://localhost:5173/login](http://localhost:5173/login)), 
 
 ---
 
+## 📚 Engineering & Clinical Documentation Index
+
+Comprehensive milestone documentation, clinical specifications, mathematical formulations, and validation reports are stored in `docs/`:
+
+| Milestone | Document | Focus & Highlights |
+|---|---|---|
+| **5.0** | [`docs/milestone-5-python-ai-foundation.md`](docs/milestone-5-python-ai-foundation.md) | FastAPI microservice foundation, port `8001` integration, and in-memory streaming gateway |
+| **5.1** | [`docs/milestone-5.1-eye-capture-ai-report.md`](docs/milestone-5.1-eye-capture-ai-report.md) | EyeCapture AI: Sharpness/exposure QA gating, 4-class U-Net segmentation, and canvas overlays |
+| **5.2A** | [`docs/milestone-5.2a-flair-retinal-report.md`](docs/milestone-5.2a-flair-retinal-report.md) | FLAIR Retinal Foundation Model: Zero-shot classification, CPU benchmark, and domain gating |
+| **5.2B** | [`docs/milestone-5.2b-adnexal-alignment-telemetry.md`](docs/milestone-5.2b-adnexal-alignment-telemetry.md) | Adnexal biometry: MediaPipe 468-mesh, Sobel edge macro profiler, MRD1/MRD2, PFH, IPD & Hirschberg |
+| **5.3** | [`docs/milestone-5.3-hyperaemia-pterygium.md`](docs/milestone-5.3-hyperaemia-pterygium.md) | Scleral vascular density %, Efron redness grading (0–4), and pterygium corneal encroachment |
+| **5.4** | [`docs/milestone-5.4-production-retinal-ai.md`](docs/milestone-5.4-production-retinal-ai.md) | Production Retinal AI (FLAIR): Zero-shot CFP multi-category evaluation (DR, DME, Glaucoma, BRVO/CRVO), triage routing, and fundus overlays |
+| **5.5** | [`docs/milestone-5.5-lens-corneal-clarity-report.md`](docs/milestone-5.5-lens-corneal-clarity-report.md) | Lens & Corneal Clarity: Crystalline lens opacity (Cataract WHO Grades 0–3) & Arcus Senilis lipid ring biometry |
+| **5.6** | [`docs/milestone-5.6-live-optometrist-queue-and-pdf-reporting.md`](docs/milestone-5.6-live-optometrist-queue-and-pdf-reporting.md) | Live MongoDB Optometrist Review Queue, Decision Persistence, and Comprehensive Clinical PDF Report Engine |
+| **UI Polish** | [`docs/ui-styling-enhancements-report.md`](docs/ui-styling-enhancements-report.md) | Full-spectrum styling audit: borders, dark modal scrollbars, responsive table widths, modal scroll bounds, and non-overflowing 5-engine AI toolbar |
+| **Architecture** | [`docs/architecture.md`](docs/architecture.md) | End-to-end multi-tenant system architecture, AES-256-GCM vault, and RBAC security |
+| **Research** | [`docs/research/eye-capture-ai-model-evaluation.md`](docs/research/eye-capture-ai-model-evaluation.md) | In-depth AI/ML model landscape evaluation for ophthalmology and tele-optometry |
+
+---
+
 ## 🧪 Running Automated Verification & Audit Tests
 
 The project includes automated quality, security, and clinical verification test suites. You can run them anytime:
 
 ```bash
+# 0. Python AI Microservice Test Suite (pytest - 38 tests across 5 modules)
+cd ai-service && .venv\Scripts\pytest -c pytest.ini tests/
+
 # 1. Milestone 4.2 Security, Encryption & Store Isolation Audit (46 tests)
 node server/test-milestone4.2-audit.js
 

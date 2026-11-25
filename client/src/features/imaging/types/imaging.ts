@@ -190,3 +190,152 @@ export interface AdnexalTelemetryData {
   disclaimer: string;
 }
 
+// Milestone 5.3: Ocular Surface & Hyperaemia Telemetry
+export interface HyperaemiaMetrics {
+  evaluated: boolean;
+  sclera_area_px: number;
+  vascular_density_pct: number;
+  efron_grade: number; // 0 to 4
+  severity_label: string;
+  efron_grade_name: string;
+  clinical_guidance: string;
+}
+
+export interface PterygiumMetrics {
+  detected: boolean;
+  encroachment_zone: string; // 'NASAL' | 'TEMPORAL' | 'NONE'
+  limbic_invasion_mm: number;
+  pupil_clearance_mm: number;
+  severity_grade: string; // 'NONE' | 'GRADE_1_MILD' | 'GRADE_2_MODERATE' | 'GRADE_3_ADVANCED'
+  clinical_advice: string;
+}
+
+export interface HyperaemiaTelemetryData {
+  success: boolean;
+  filename: string;
+  eye_side: EyeSide;
+  calibration: {
+    iris_diameter_px: number;
+    iris_radius_px: number;
+    pupil_radius_px: number;
+    scale_factor_mm_per_px: number;
+    reference_iris_diameter_mm: number;
+  };
+  hyperaemia: HyperaemiaMetrics;
+  pterygium: PterygiumMetrics;
+  overlay_rgba_base64?: string;
+  disclaimer: string;
+}
+
+// Milestone 5.4: Retinal Foundation AI (FLAIR)
+export interface RetinalPromptRanking {
+  prompt: string;
+  probability_pct: number;
+  logit: number;
+}
+
+export interface RetinalCategoryAssessment {
+  top_stage?: string;
+  top_finding?: string;
+  confidence_pct: number;
+  referable_dr?: boolean;
+  referable_maculopathy?: boolean;
+  glaucoma_suspected?: boolean;
+  all_stages?: RetinalPromptRanking[];
+  all_findings?: RetinalPromptRanking[];
+}
+
+export interface RetinalAnalysisData {
+  success: boolean;
+  is_fundus_image: boolean;
+  filename: string;
+  eye_side: EyeSide;
+  error?: string;
+  domain_metrics?: {
+    red_to_blue_ratio: number;
+    perimeter_dark_fraction: number;
+    mean_luminance: number;
+    is_fundus: boolean;
+  };
+  model_metadata?: {
+    model_name: string;
+    checkpoint: string;
+    parameters: string;
+    vision_encoder: string;
+    text_encoder: string;
+    embedding_dimension: number;
+    latency_ms: number;
+  };
+  primary_assessment?: {
+    top_condition: string;
+    confidence_pct: number;
+    master_ranking: RetinalPromptRanking[];
+  };
+  clinical_categories?: {
+    diabetic_retinopathy: RetinalCategoryAssessment;
+    macular_integrity: RetinalCategoryAssessment;
+    glaucoma_screening: RetinalCategoryAssessment;
+    vascular_occlusion: RetinalCategoryAssessment;
+  };
+  decision_support?: {
+    triage_urgency: 'ROUTINE_OBSERVATION' | 'ELECTIVE_OPHTHALMOLOGY_CONSULT' | 'URGENT_RETINA_SPECIALIST';
+    referral_indicated: boolean;
+    clinical_advice: string;
+  };
+  overlay_rgba_base64?: string;
+  disclaimer: string;
+}
+
+// Milestone 5.5: Lens & Corneal Clarity Engine
+export interface LensOpacityMetrics {
+  cataract_grade: number; // 0, 1, 2, 3
+  grade_name: string;
+  severity_label: 'NORMAL_CLEAR' | 'MILD_OPACITY' | 'MODERATE_CATARACT' | 'ADVANCED_CATARACT';
+  mean_luminance: number;
+  median_luminance: number;
+  std_luminance: number;
+  opacity_area_fraction_pct: number;
+  shannon_entropy: number;
+  evaluated_pupil_pixels: number;
+  clinical_advice: string;
+}
+
+export interface CornealArcusMetrics {
+  arcus_detected: boolean;
+  severity_grade: 'NONE' | 'GRADE_1_PARTIAL_ARC' | 'GRADE_2_CONFLUENT_ARC' | 'GRADE_3_CIRCUMFERENTIAL_RING';
+  extent_degrees: number;
+  coverage_pct: number;
+  limbal_band_luminance: number;
+  span_description: string;
+  clinical_advice: string;
+}
+
+export interface CornealLensClarityData {
+  success: boolean;
+  filename: string;
+  eye_side: EyeSide;
+  calibration: {
+    iris_center_xy: [number, number];
+    iris_diameter_px: number;
+    iris_radius_px: number;
+    pupil_radius_px: number;
+    pupil_diameter_mm: number;
+    scale_factor_mm_per_px: number;
+    reference_iris_diameter_mm: number;
+  };
+  lens_opacity: LensOpacityMetrics;
+  corneal_arcus: CornealArcusMetrics;
+  triage: {
+    urgency: 'NORMAL_CLEAR' | 'ROUTINE_OBSERVATION' | 'ELECTIVE_CONSULT' | 'URGENT_OPHTHALMOLOGY_CONSULT';
+    summary: string;
+    referral_indicated: boolean;
+  };
+  telemetry: {
+    latency_ms: number;
+    resolution: string;
+  };
+  overlay_rgba_base64?: string;
+  disclaimer: string;
+}
+
+

@@ -25,7 +25,7 @@ import {
   Printer
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { apiRequest } from '@/services/api';
+import { apiRequest, openClinicalReportPdf } from '@/services/api';
 import { CustomerDemographics } from '@shared/types';
 import { ProfilePhotoUploader } from '@/features/imaging/components/ProfilePhotoUploader';
 import { EyeImageGallery } from '@/features/imaging/components/EyeImageGallery';
@@ -243,6 +243,16 @@ export const CustomerProfilePage: React.FC = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => openClinicalReportPdf(customer.customerId || customer.customerCode || id || '', true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold shadow-sm hover:shadow transition-all active:scale-95"
+            title="Download comprehensive PDF clinical report including all test scores and doctor suggestions"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Download PDF Report</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setShowEditModal(true)}
@@ -656,15 +666,14 @@ export const CustomerProfilePage: React.FC = () => {
                         </span>
                         
                         <div className="flex items-center gap-2">
-                          <a
-                            href={`/api/screenings/${latest.screeningId}/pdf`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs font-semibold text-slate-600 hover:text-slate-900 border border-slate-200 px-3 py-1.5 rounded-xl hover:bg-slate-50 inline-flex items-center gap-1 shadow-xs"
+                          <button
+                            type="button"
+                            onClick={() => openClinicalReportPdf(latest.screeningId)}
+                            className="text-xs font-semibold text-slate-700 hover:text-slate-900 border border-slate-200 px-3 py-1.5 rounded-xl hover:bg-slate-50 inline-flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
                           >
-                            <Printer className="w-3.5 h-3.5 text-slate-400" />
-                            <span>Print PDF</span>
-                          </a>
+                            <Printer className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Print / Save PDF</span>
+                          </button>
 
                           <Link
                             to={`/screenings/${latest.screeningId}/review`}
@@ -712,9 +721,9 @@ export const CustomerProfilePage: React.FC = () => {
 
       {/* Edit Customer Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-healthcare-lg overflow-hidden my-8">
-            <div className="p-5 sm:p-6 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-navy-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-healthcare-lg overflow-hidden my-auto max-h-[92vh] flex flex-col">
+            <div className="p-5 sm:p-6 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between shrink-0">
               <div>
                 <h3 className="font-display font-bold text-navy-950 text-base">Edit Customer Demographic Record</h3>
                 <p className="text-xs text-slate-500">ID: {customer.customerId || customer.customerCode}</p>
@@ -728,7 +737,7 @@ export const CustomerProfilePage: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleUpdateSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleUpdateSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Full Name *

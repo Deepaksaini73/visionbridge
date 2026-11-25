@@ -299,7 +299,7 @@ export const CustomerListPage: React.FC = () => {
           <div>
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full min-w-[720px] text-left text-xs">
                 <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
                   <tr>
                     <th className="px-6 py-3.5">Customer ID & Name</th>
@@ -485,9 +485,9 @@ export const CustomerListPage: React.FC = () => {
 
       {/* Edit Customer Modal */}
       {editingCustomer && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-healthcare-lg overflow-hidden my-8">
-            <div className="p-5 sm:p-6 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-navy-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-healthcare-lg overflow-hidden my-auto max-h-[92vh] flex flex-col">
+            <div className="p-5 sm:p-6 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between shrink-0">
               <div>
                 <h3 className="font-display font-bold text-navy-950 text-base">Edit Customer Record</h3>
                 <p className="text-xs text-slate-500">ID: {editingCustomer.customerId || editingCustomer.id}</p>
@@ -502,12 +502,12 @@ export const CustomerListPage: React.FC = () => {
             </div>
 
             {updateMessage && (
-              <div className="p-3.5 bg-teal-50 border-b border-teal-200 text-teal-800 text-xs font-medium">
+              <div className="p-3.5 bg-teal-50 border-b border-teal-200 text-teal-800 text-xs font-medium shrink-0">
                 {updateMessage}
               </div>
             )}
 
-            <form onSubmit={handleSaveEdit} className="p-6 space-y-4">
+            <form onSubmit={handleSaveEdit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Customer Full Name *

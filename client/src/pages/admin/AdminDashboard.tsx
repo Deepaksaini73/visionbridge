@@ -368,10 +368,10 @@ export const AdminDashboard: React.FC = () => {
         
         {/* Tab Headers & Search */}
         <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl text-xs font-semibold w-fit">
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-100 p-1 rounded-2xl text-xs font-semibold w-full sm:w-fit overflow-x-auto no-scrollbar">
             <button
               onClick={() => setActiveTab('USERS')}
-              className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${
+              className={`px-3.5 sm:px-4 py-2 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeTab === 'USERS'
                   ? 'bg-white text-navy-950 shadow-2xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
@@ -383,7 +383,7 @@ export const AdminDashboard: React.FC = () => {
 
             <button
               onClick={() => setActiveTab('STORES')}
-              className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${
+              className={`px-3.5 sm:px-4 py-2 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap shrink-0 ${
                 activeTab === 'STORES'
                   ? 'bg-white text-navy-950 shadow-2xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
@@ -411,7 +411,7 @@ export const AdminDashboard: React.FC = () => {
           <div>
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full min-w-[700px] text-left text-xs">
                 <thead className="bg-slate-50/80 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
                   <tr>
                     <th className="px-6 py-3.5">Name & Email</th>
@@ -551,7 +551,7 @@ export const AdminDashboard: React.FC = () => {
           <div>
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full min-w-[650px] text-left text-xs">
                 <thead className="bg-slate-50/80 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
                   <tr>
                     <th className="px-6 py-3.5">Store Code & Name</th>
@@ -620,9 +620,9 @@ export const AdminDashboard: React.FC = () => {
 
       {/* MODAL 1: Create User (Safe z-[100] Layer) */}
       {showUserModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-md animate-fade-in overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden my-8 animate-slide-up">
-            <div className="p-5 sm:p-6 border-b border-slate-200/90 bg-slate-50/70 flex items-center justify-between">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-navy-950/60 backdrop-blur-md animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col animate-slide-up">
+            <div className="p-5 sm:p-6 border-b border-slate-200/90 bg-slate-50/70 flex items-center justify-between shrink-0">
               <div>
                 <h3 className="font-display font-extrabold text-navy-950 text-lg">Provision New User Account</h3>
                 <p className="text-xs text-slate-500">Create optometrist reviewer, store operator, or admin account</p>
@@ -636,7 +636,7 @@ export const AdminDashboard: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateUserSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleCreateUserSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Full Name *
@@ -775,9 +775,9 @@ export const AdminDashboard: React.FC = () => {
 
       {/* MODAL 2: Create Store (Safe z-[100] Layer) */}
       {showStoreModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-md animate-fade-in overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden my-8 animate-slide-up">
-            <div className="p-5 sm:p-6 border-b border-slate-200/90 bg-slate-50/70 flex items-center justify-between">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-navy-950/60 backdrop-blur-md animate-fade-in overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col animate-slide-up">
+            <div className="p-5 sm:p-6 border-b border-slate-200/90 bg-slate-50/70 flex items-center justify-between shrink-0">
               <div>
                 <h3 className="font-display font-extrabold text-navy-950 text-lg">Register Optical Center</h3>
                 <p className="text-xs text-slate-500">Add local partner store or rural outreach center</p>
@@ -791,7 +791,7 @@ export const AdminDashboard: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateStoreSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleCreateStoreSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">

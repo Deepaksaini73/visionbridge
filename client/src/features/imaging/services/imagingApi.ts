@@ -5,6 +5,9 @@ import {
   EyeCaptureAiAnalysis,
   EyeQualityAssessment,
   AdnexalTelemetryData,
+  HyperaemiaTelemetryData,
+  RetinalAnalysisData,
+  CornealLensClarityData,
 } from '../types/imaging';
 
 export { getAuthenticatedMediaUrl };
@@ -147,6 +150,79 @@ export const imagingApi = {
 
   getAdnexalStatus: async (): Promise<any> => {
     const res = await apiRequest('/ai/adnexal/status', {
+      method: 'GET',
+    });
+    return res.data;
+  },
+
+  // Milestone 5.3: Conjunctival Hyperaemia & Pterygium Telemetry
+  analyzeHyperaemia: async (params: {
+    imageId?: string;
+    imageData?: string;
+    filename?: string;
+    eyeSide?: string;
+  }): Promise<HyperaemiaTelemetryData> => {
+    const res = await apiRequest<HyperaemiaTelemetryData>('/ai/hyperaemia/analyze', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    if (!res.success || !res.data) {
+      throw new Error(res.error?.message || res.message || 'Hyperaemia & pterygium analysis failed');
+    }
+    return res.data;
+  },
+
+  getHyperaemiaStatus: async (): Promise<any> => {
+    const res = await apiRequest('/ai/hyperaemia/status', {
+      method: 'GET',
+    });
+    return res.data;
+  },
+
+  // Milestone 5.4: Retinal Foundation AI (FLAIR)
+  analyzeRetinal: async (params: {
+    imageId?: string;
+    imageData?: string;
+    filename?: string;
+    eyeSide?: string;
+    force?: boolean;
+  }): Promise<RetinalAnalysisData> => {
+    const res = await apiRequest<RetinalAnalysisData>('/ai/retinal/analyze', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    if (!res.success || !res.data) {
+      throw new Error(res.error?.message || res.message || 'Retinal foundation analysis failed');
+    }
+    return res.data;
+  },
+
+  getRetinalStatus: async (): Promise<any> => {
+    const res = await apiRequest('/ai/retinal/status', {
+      method: 'GET',
+    });
+    return res.data;
+  },
+
+  // Milestone 5.5: Lens & Corneal Clarity Engine
+  analyzeClarity: async (params: {
+    imageId?: string;
+    imageData?: string;
+    filename?: string;
+    eyeSide?: string;
+  }): Promise<CornealLensClarityData> => {
+    const res = await apiRequest<CornealLensClarityData>('/ai/clarity/analyze', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+    if (!res.success || !res.data) {
+      throw new Error(res.error?.message || res.message || 'Lens & corneal clarity analysis failed');
+    }
+    return res.data;
+  },
+
+  getClarityStatus: async (): Promise<any> => {
+    const res = await apiRequest('/ai/clarity/status', {
       method: 'GET',
     });
     return res.data;

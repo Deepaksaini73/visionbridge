@@ -8,6 +8,7 @@ import {
   uploadProfilePhoto,
   getProfilePhoto,
   deleteProfilePhoto,
+  getCustomerReport,
 } from '../controllers/customerController.js';
 import { authenticateToken, requireRole, authenticateMedia } from '../middleware/auth.js';
 
@@ -22,6 +23,7 @@ router.use(authenticateToken);
 router.get('/', getCustomers);
 router.post('/', requireRole('STORE_OPERATOR', 'ADMIN'), createCustomer);
 router.get('/:id', getCustomerById);
+router.get('/:id/report', getCustomerReport);
 router.patch('/:id', updateCustomer);
 router.get('/:id/status', getCustomerStatus);
 

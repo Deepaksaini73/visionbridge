@@ -541,3 +541,252 @@ export async function analyzeAdnexalAlignment(req: AuthenticatedRequest, res: Re
   }
 }
 
+/**
+ * GET /api/ai/hyperaemia/status
+ * Queries Hyperaemia & Pterygium engine status.
+ */
+export async function getHyperaemiaStatus(req: Request, res: Response): Promise<void> {
+  try {
+    const response = await fetchWithTimeout(`${AI_SERVICE_URL}/api/v1/hyperaemia/status`, { method: 'GET' }, 3000);
+    const data = await response.json();
+    res.status(response.status).json({
+      success: response.ok,
+      connected: true,
+      data,
+    });
+  } catch (err: any) {
+    res.status(503).json({
+      success: false,
+      connected: false,
+      error: {
+        code: 'AI_SERVICE_UNAVAILABLE',
+        message: 'Python Hyperaemia & Pterygium microservice is offline.',
+        details: err.message,
+      },
+    });
+  }
+}
+
+/**
+ * POST /api/ai/hyperaemia/analyze
+ * Evaluates conjunctival microvascular density %, maps to the Efron 0-4 scale,
+ * and screens for pterygium limbic corneal encroachment.
+ */
+export async function analyzeHyperaemiaAndPterygium(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const parsed = eyeAnalysisBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: parsed.error.errors[0]?.message || 'Invalid payload.' },
+    });
+    return;
+  }
+
+  try {
+    const { buffer, filename, eyeSide } = await resolveImageBuffer(req, parsed.data);
+    const blob = new Blob([buffer]);
+    const formData = new FormData();
+    formData.append('file', blob, filename);
+
+    const targetEyeSide = eyeSide || (req.body as any).eyeSide;
+    const url = targetEyeSide
+      ? `${AI_SERVICE_URL}/api/v1/hyperaemia/analyze?eye_side=${encodeURIComponent(targetEyeSide)}`
+      : `${AI_SERVICE_URL}/api/v1/hyperaemia/analyze`;
+    const response = await fetchWithTimeout(url, {
+      method: 'POST',
+      body: formData,
+    }, 8000);
+
+    const data = await response.json();
+    res.status(response.status).json({
+      success: response.ok,
+      connected: true,
+      data,
+    });
+  } catch (err: any) {
+    if (err.status) {
+      res.status(err.status).json({ success: false, error: { code: err.code, message: err.message } });
+      return;
+    }
+    res.status(503).json({
+      success: false,
+      connected: false,
+      error: {
+        code: 'AI_SERVICE_UNAVAILABLE',
+        message: 'Python AI service is unreachable. Unable to perform hyperaemia and pterygium analysis.',
+        details: err.message,
+      },
+    });
+  }
+}
+
+/**
+ * GET /api/ai/retinal/status
+ * Queries Retinal Foundation AI (FLAIR) engine status.
+ */
+export async function getRetinalStatus(req: Request, res: Response): Promise<void> {
+  try {
+    const response = await fetchWithTimeout(`${AI_SERVICE_URL}/api/v1/retinal/status`, { method: 'GET' }, 3000);
+    const data = await response.json();
+    res.status(response.status).json({
+      success: response.ok,
+      connected: true,
+      data,
+    });
+  } catch (err: any) {
+    res.status(503).json({
+      success: false,
+      connected: false,
+      error: {
+        code: 'AI_SERVICE_UNAVAILABLE',
+        message: 'Python Retinal Foundation AI microservice is offline.',
+        details: err.message,
+      },
+    });
+  }
+}
+
+/**
+ * POST /api/ai/retinal/analyze
+ * Evaluates Color Retinal Fundus Photographs via zero-shot FLAIR foundation model:
+ * Diabetic Retinopathy, Macular Edema/Holes, Glaucoma cup enlargement, and Vascular Occlusion.
+ */
+export async function analyzeRetinalPhotograph(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const parsed = eyeAnalysisBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: parsed.error.errors[0]?.message || 'Invalid payload.' },
+    });
+    return;
+  }
+
+  try {
+    const { buffer, filename, eyeSide } = await resolveImageBuffer(req, parsed.data);
+    const blob = new Blob([buffer]);
+    const formData = new FormData();
+    formData.append('file', blob, filename);
+
+    const targetEyeSide = eyeSide || (req.body as any).eyeSide;
+    const force = Boolean((req.body as any).force);
+    let url = `${AI_SERVICE_URL}/api/v1/retinal/analyze`;
+    const params = new URLSearchParams();
+    if (targetEyeSide) params.set('eye_side', targetEyeSide);
+    if (force) params.set('force', 'true');
+    const queryString = params.toString();
+    if (queryString) url += `?${queryString}`;
+
+    const response = await fetchWithTimeout(url, {
+      method: 'POST',
+      body: formData,
+    }, 15000);
+
+    const data = await response.json();
+    res.status(response.status).json({
+      success: response.ok,
+      connected: true,
+      data,
+    });
+  } catch (err: any) {
+    if (err.status) {
+      res.status(err.status).json({ success: false, error: { code: err.code, message: err.message } });
+      return;
+    }
+    res.status(503).json({
+      success: false,
+      connected: false,
+      error: {
+        code: 'AI_SERVICE_UNAVAILABLE',
+        message: 'Python AI service is unreachable. Unable to perform retinal foundation analysis.',
+        details: err.message,
+      },
+    });
+  }
+}
+
+/**
+ * GET /api/ai/clarity/status
+ * Proxies Lens & Corneal Clarity Engine status from Python microservice.
+ */
+export async function getClarityStatus(req: Request, res: Response): Promise<void> {
+  try {
+    const response = await fetchWithTimeout(`${AI_SERVICE_URL}/api/v1/clarity/status`, {
+      method: 'GET',
+    }, 5000);
+
+    const data = await response.json();
+    res.status(response.status).json({
+      success: response.ok,
+      connected: true,
+      data,
+    });
+  } catch (err: any) {
+    res.status(503).json({
+      success: false,
+      connected: false,
+      error: {
+        code: 'AI_SERVICE_UNAVAILABLE',
+        message: 'Python Lens & Corneal Clarity microservice is offline.',
+        details: err.message,
+      },
+    });
+  }
+}
+
+/**
+ * POST /api/ai/clarity/analyze
+ * Evaluates crystalline lens opacity (cataract staging) and corneal arcus (arcus senilis).
+ */
+export async function analyzeCornealLensClarity(req: AuthenticatedRequest, res: Response): Promise<void> {
+  const parsed = eyeAnalysisBodySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: parsed.error.errors[0]?.message || 'Invalid payload.' },
+    });
+    return;
+  }
+
+  try {
+    const { buffer, filename, eyeSide } = await resolveImageBuffer(req, parsed.data);
+    const blob = new Blob([buffer]);
+    const formData = new FormData();
+    formData.append('file', blob, filename);
+
+    const targetEyeSide = eyeSide || (req.body as any).eyeSide;
+    let url = `${AI_SERVICE_URL}/api/v1/clarity/analyze`;
+    if (targetEyeSide) {
+      url += `?eye_side=${encodeURIComponent(targetEyeSide)}`;
+    }
+
+    const response = await fetchWithTimeout(url, {
+      method: 'POST',
+      body: formData,
+    }, 8000);
+
+    const data = await response.json();
+    res.status(response.status).json({
+      success: response.ok,
+      connected: true,
+      data,
+    });
+  } catch (err: any) {
+    if (err.status) {
+      res.status(err.status).json({ success: false, error: { code: err.code, message: err.message } });
+      return;
+    }
+    res.status(503).json({
+      success: false,
+      connected: false,
+      error: {
+        code: 'AI_SERVICE_UNAVAILABLE',
+        message: 'Python AI service is unreachable. Unable to perform lens & corneal clarity analysis.',
+        details: err.message,
+      },
+    });
+  }
+}
+
+
+
+

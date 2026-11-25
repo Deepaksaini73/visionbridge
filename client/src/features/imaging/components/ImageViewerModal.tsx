@@ -27,12 +27,21 @@ import {
   Crosshair,
   Ruler,
   Compass,
+  Flame,
+  CircleDot,
+  Activity,
+  Aperture,
+  Sun,
+  FileCheck,
 } from 'lucide-react';
 import { 
   ClinicalEyeImageRecord, 
   EyeSide, 
   EyeCaptureAiAnalysis, 
-  AdnexalTelemetryData 
+  AdnexalTelemetryData,
+  HyperaemiaTelemetryData,
+  RetinalAnalysisData,
+  CornealLensClarityData,
 } from '../types/imaging';
 import { imagingApi, getAuthenticatedMediaUrl } from '../services/imagingApi';
 import { useAuth } from '../../../context/AuthContext';
@@ -90,9 +99,21 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
   const [adnexalAnalyses, setAdnexalAnalyses] = useState<Record<string, AdnexalTelemetryData>>({});
   const [isAnalyzingAdnexa, setIsAnalyzingAdnexa] = useState<boolean>(false);
 
+  // Ocular Surface & Hyperaemia Telemetry states (Milestone 5.3: Efron Redness & Pterygium)
+  const [hyperaemiaAnalyses, setHyperaemiaAnalyses] = useState<Record<string, HyperaemiaTelemetryData>>({});
+  const [isAnalyzingHyperaemia, setIsAnalyzingHyperaemia] = useState<boolean>(false);
+
+  // Retinal Foundation AI states (Milestone 5.4: FLAIR Zero-Shot Model)
+  const [retinalAnalyses, setRetinalAnalyses] = useState<Record<string, RetinalAnalysisData>>({});
+  const [isAnalyzingRetinal, setIsAnalyzingRetinal] = useState<boolean>(false);
+
+  // Lens & Corneal Clarity Engine states (Milestone 5.5: Cataract & Arcus Senilis)
+  const [clarityAnalyses, setClarityAnalyses] = useState<Record<string, CornealLensClarityData>>({});
+  const [isAnalyzingClarity, setIsAnalyzingClarity] = useState<boolean>(false);
+
   // Enlarged AI Studio Drawer states
   const [showAiModal, setShowAiModal] = useState<boolean>(false);
-  const [activeAiTab, setActiveAiTab] = useState<'ANTERIOR' | 'ADNEXAL'>('ANTERIOR');
+  const [activeAiTab, setActiveAiTab] = useState<'ANTERIOR' | 'ADNEXAL' | 'HYPERAEMIA' | 'RETINAL' | 'CLARITY'>('ANTERIOR');
 
   // Initialize index
   useEffect(() => {
@@ -116,6 +137,9 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
   const currentImage = images[currentIndex];
   const currentAnalysis = currentImage ? aiAnalyses[currentImage.imageId] : undefined;
   const currentAdnexal = currentImage ? adnexalAnalyses[currentImage.imageId] : undefined;
+  const currentHyperaemia = currentImage ? hyperaemiaAnalyses[currentImage.imageId] : undefined;
+  const currentRetinal = currentImage ? retinalAnalyses[currentImage.imageId] : undefined;
+  const currentClarity = currentImage ? clarityAnalyses[currentImage.imageId] : undefined;
 
   // Run EyeCapture AI (Milestone 5.1 Anterior Quality & Segmentation)
   const handleRunAiAnalysis = async (forceSegmentation = false) => {
@@ -161,6 +185,79 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
       setAiError(err.message || 'Adnexal telemetry analysis failed.');
     } finally {
       setIsAnalyzingAdnexa(false);
+    }
+  };
+
+  // Run Ocular Surface & Hyperaemia Telemetry (Milestone 5.3 Efron Redness & Pterygium)
+  const handleRunHyperaemiaAnalysis = async () => {
+    if (!currentImage) return;
+    setIsAnalyzingHyperaemia(true);
+    setAiError(null);
+
+    try {
+      const result = await imagingApi.analyzeHyperaemia({
+        imageId: currentImage.imageId,
+      });
+
+      setHyperaemiaAnalyses((prev) => ({
+        ...prev,
+        [currentImage.imageId]: result,
+      }));
+      setActiveAiTab('HYPERAEMIA');
+      setShowOverlay(true);
+    } catch (err: any) {
+      setAiError(err.message || 'Hyperaemia & pterygium analysis failed.');
+    } finally {
+      setIsAnalyzingHyperaemia(false);
+    }
+  };
+
+  // Run Retinal Foundation AI (Milestone 5.4 FLAIR Zero-Shot Model)
+  const handleRunRetinalAnalysis = async (force = false) => {
+    if (!currentImage) return;
+    setIsAnalyzingRetinal(true);
+    setAiError(null);
+
+    try {
+      const result = await imagingApi.analyzeRetinal({
+        imageId: currentImage.imageId,
+        force,
+      });
+
+      setRetinalAnalyses((prev) => ({
+        ...prev,
+        [currentImage.imageId]: result,
+      }));
+      setActiveAiTab('RETINAL');
+      setShowOverlay(true);
+    } catch (err: any) {
+      setAiError(err.message || 'Retinal foundation analysis failed.');
+    } finally {
+      setIsAnalyzingRetinal(false);
+    }
+  };
+
+  // Run Lens & Corneal Clarity Telemetry (Milestone 5.5 Cataract & Arcus Senilis)
+  const handleRunClarityAnalysis = async () => {
+    if (!currentImage) return;
+    setIsAnalyzingClarity(true);
+    setAiError(null);
+
+    try {
+      const result = await imagingApi.analyzeClarity({
+        imageId: currentImage.imageId,
+      });
+
+      setClarityAnalyses((prev) => ({
+        ...prev,
+        [currentImage.imageId]: result,
+      }));
+      setActiveAiTab('CLARITY');
+      setShowOverlay(true);
+    } catch (err: any) {
+      setAiError(err.message || 'Lens & corneal clarity analysis failed.');
+    } finally {
+      setIsAnalyzingClarity(false);
     }
   };
 
@@ -271,28 +368,28 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-md animate-fadeIn">
       
       {/* Top Bar */}
-      <div className="absolute top-0 left-0 right-0 h-16 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between px-6 z-20">
+      <div className="absolute top-0 left-0 right-0 h-16 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between px-4 sm:px-6 z-20 gap-3">
         
         {/* Left: Title & Index */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3 sm:space-x-4 shrink-0">
           <div className="flex items-center space-x-2">
-            <Eye className="w-5 h-5 text-blue-400" />
-            <h3 className="text-white font-semibold text-base">
+            <Eye className="w-5 h-5 text-blue-400 shrink-0" />
+            <h3 className="text-white font-semibold text-sm sm:text-base hidden sm:block">
               Clinical Eye Image Viewer
             </h3>
           </div>
-          <div className="h-4 w-px bg-slate-700" />
-          <div className="flex items-center space-x-2 text-xs text-slate-300">
+          <div className="h-4 w-px bg-slate-700 hidden sm:block" />
+          <div className="flex items-center space-x-1.5 sm:space-x-2 text-xs text-slate-300">
             <span className="font-mono bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
               {currentImage.customerCode}
             </span>
             <span>·</span>
-            <span>Image {currentIndex + 1} of {images.length}</span>
+            <span className="text-[11px] sm:text-xs text-slate-400">{currentIndex + 1}/{images.length}</span>
           </div>
         </div>
 
         {/* Center: Image Manipulation Controls */}
-        <div className="hidden md:flex items-center space-x-1.5 bg-slate-800/90 rounded-xl p-1 border border-slate-700/80 shadow-lg">
+        <div className="hidden lg:flex items-center space-x-1.5 bg-slate-800/90 rounded-xl p-1 border border-slate-700/80 shadow-lg shrink-0">
           <button
             onClick={handleZoomOut}
             title="Zoom Out (-25%)"
@@ -328,7 +425,10 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
 
           {/* Overlay Quick Toggle */}
           {((activeAiTab === 'ANTERIOR' && currentAnalysis?.segmentation?.overlay_rgba_base64) ||
-            (activeAiTab === 'ADNEXAL' && currentAdnexal?.overlay_rgba_base64)) && (
+            (activeAiTab === 'ADNEXAL' && currentAdnexal?.overlay_rgba_base64) ||
+            (activeAiTab === 'HYPERAEMIA' && currentHyperaemia?.overlay_rgba_base64) ||
+            (activeAiTab === 'RETINAL' && currentRetinal?.overlay_rgba_base64) ||
+            (activeAiTab === 'CLARITY' && currentClarity?.overlay_rgba_base64)) && (
             <>
               <div className="h-4 w-px bg-slate-700 mx-1" />
               <button
@@ -348,76 +448,164 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
         </div>
 
         {/* Right: Quick Action Buttons & Close */}
-        <div className="flex items-center space-x-2.5">
-          
-          {/* EyeCapture Anterior AI Top Button */}
-          <button
-            onClick={() => {
-              setActiveAiTab('ANTERIOR');
-              setShowAiModal(true);
-              if (!currentAnalysis && !isAnalyzing) {
-                handleRunAiAnalysis(false);
-              }
-            }}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold shadow-md transition ${
-              currentAnalysis?.quality?.status === 'USABLE_FOR_ANALYSIS'
-                ? 'bg-emerald-950/70 hover:bg-emerald-900 border-emerald-500/40 text-emerald-200'
-                : currentAnalysis?.quality?.status === 'RETAKE_RECOMMENDED'
-                ? 'bg-rose-950/70 hover:bg-rose-900 border-rose-500/40 text-rose-200'
-                : 'bg-gradient-to-r from-purple-600/40 to-indigo-600/40 hover:from-purple-600/60 hover:to-indigo-600/60 border-purple-500/40 text-purple-200'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-            <span>
-              {isAnalyzing
-                ? 'Analyzing...'
-                : currentAnalysis
-                ? `Anterior AI (${currentAnalysis.quality.overall_score}%)`
-                : 'Anterior AI'}
-            </span>
-          </button>
+        <div className="flex items-center space-x-2 min-w-0 shrink">
+          {/* Scrollable / Flexible AI Engine Pills Ribbon */}
+          <div className="flex items-center space-x-1.5 overflow-x-auto no-scrollbar py-1">
+            {/* EyeCapture Anterior AI Top Button */}
+            <button
+              onClick={() => {
+                setActiveAiTab('ANTERIOR');
+                setShowAiModal(true);
+                if (!currentAnalysis && !isAnalyzing) {
+                  handleRunAiAnalysis(false);
+                }
+              }}
+              className={`flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold shadow-md transition shrink-0 ${
+                currentAnalysis?.quality?.status === 'USABLE_FOR_ANALYSIS'
+                  ? 'bg-emerald-950/70 hover:bg-emerald-900 border-emerald-500/40 text-emerald-200'
+                  : currentAnalysis?.quality?.status === 'RETAKE_RECOMMENDED'
+                  ? 'bg-rose-950/70 hover:bg-rose-900 border-rose-500/40 text-rose-200'
+                  : 'bg-gradient-to-r from-purple-600/40 to-indigo-600/40 hover:from-purple-600/60 hover:to-indigo-600/60 border-purple-500/40 text-purple-200'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              <span>
+                {isAnalyzing
+                  ? 'Analyzing...'
+                  : currentAnalysis
+                  ? <>Anterior <span className="hidden xl:inline">({currentAnalysis.quality.overall_score}%)</span></>
+                  : 'Anterior AI'}
+              </span>
+            </button>
 
-          {/* Adnexal & Alignment Telemetry Top Button */}
-          <button
-            onClick={() => {
-              setActiveAiTab('ADNEXAL');
-              setShowAiModal(true);
-              if (!currentAdnexal && !isAnalyzingAdnexa) {
-                handleRunAdnexalAnalysis();
-              }
-            }}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold shadow-md transition ${
-              currentAdnexal
-                ? 'bg-cyan-950/70 hover:bg-cyan-900 border-cyan-500/40 text-cyan-200'
-                : 'bg-gradient-to-r from-cyan-600/40 to-blue-600/40 hover:from-cyan-600/60 hover:to-blue-600/60 border-cyan-500/40 text-cyan-200'
-            }`}
-          >
-            <Ruler className="w-3.5 h-3.5 text-cyan-400" />
-            <span>
-              {isAnalyzingAdnexa
-                ? 'Measuring...'
-                : currentAdnexal
-                ? `Adnexal Biometry (${currentAdnexal.mode === 'BILATERAL_FACE_LANDMARKER' ? 'Bilateral' : 'Macro'})`
-                : 'Adnexal Telemetry'}
-            </span>
-          </button>
+            {/* Adnexal & Alignment Telemetry Top Button */}
+            <button
+              onClick={() => {
+                setActiveAiTab('ADNEXAL');
+                setShowAiModal(true);
+                if (!currentAdnexal && !isAnalyzingAdnexa) {
+                  handleRunAdnexalAnalysis();
+                }
+              }}
+              className={`flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold shadow-md transition shrink-0 ${
+                currentAdnexal
+                  ? 'bg-cyan-950/70 hover:bg-cyan-900 border-cyan-500/40 text-cyan-200'
+                  : 'bg-gradient-to-r from-cyan-600/40 to-blue-600/40 hover:from-cyan-600/60 hover:to-blue-600/60 border-cyan-500/40 text-cyan-200'
+              }`}
+            >
+              <Ruler className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+              <span>
+                {isAnalyzingAdnexa
+                  ? 'Measuring...'
+                  : currentAdnexal
+                  ? <>Adnexa <span className="hidden xl:inline">({currentAdnexal.mode === 'BILATERAL_FACE_LANDMARKER' ? 'Bilateral' : 'Macro'})</span></>
+                  : 'Adnexal'}
+              </span>
+            </button>
 
-          {/* Download */}
-          <button
-            onClick={handleDownload}
-            title="Download original file"
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
-          >
-            <Download className="w-4 h-4" />
-          </button>
+            {/* Ocular Surface & Hyperaemia Top Button (Milestone 5.3) */}
+            <button
+              onClick={() => {
+                setActiveAiTab('HYPERAEMIA');
+                setShowAiModal(true);
+                if (!currentHyperaemia && !isAnalyzingHyperaemia) {
+                  handleRunHyperaemiaAnalysis();
+                }
+              }}
+              className={`flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold shadow-md transition shrink-0 ${
+                currentHyperaemia
+                  ? 'bg-rose-950/70 hover:bg-rose-900 border-rose-500/40 text-rose-200'
+                  : 'bg-gradient-to-r from-rose-600/40 to-amber-600/40 hover:from-rose-600/60 hover:to-amber-600/60 border-rose-500/40 text-rose-200'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+              <span>
+                {isAnalyzingHyperaemia
+                  ? 'Grading...'
+                  : currentHyperaemia
+                  ? <>Surface <span className="hidden xl:inline">(Gr {currentHyperaemia.hyperaemia.efron_grade})</span></>
+                  : 'Surface'}
+              </span>
+            </button>
 
-          {/* Close */}
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+            {/* Retinal Foundation AI Top Button (Milestone 5.4 FLAIR) */}
+            <button
+              onClick={() => {
+                setActiveAiTab('RETINAL');
+                setShowAiModal(true);
+                if (!currentRetinal && !isAnalyzingRetinal) {
+                  handleRunRetinalAnalysis();
+                }
+              }}
+              className={`flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold shadow-md transition shrink-0 ${
+                currentRetinal
+                  ? currentRetinal.decision_support?.triage_urgency === 'URGENT_RETINA_SPECIALIST'
+                    ? 'bg-red-950/70 hover:bg-red-900 border-red-500/40 text-red-200'
+                    : currentRetinal.decision_support?.triage_urgency === 'ELECTIVE_OPHTHALMOLOGY_CONSULT'
+                    ? 'bg-amber-950/70 hover:bg-amber-900 border-amber-500/40 text-amber-200'
+                    : 'bg-emerald-950/70 hover:bg-emerald-900 border-emerald-500/40 text-emerald-200'
+                  : 'bg-gradient-to-r from-teal-600/40 to-emerald-600/40 hover:from-teal-600/60 hover:to-emerald-600/60 border-teal-500/40 text-teal-200'
+              }`}
+            >
+              <CircleDot className="w-3.5 h-3.5 text-teal-400 shrink-0" />
+              <span>
+                {isAnalyzingRetinal
+                  ? 'Evaluating...'
+                  : currentRetinal?.primary_assessment
+                  ? <>Retina <span className="hidden xl:inline">({currentRetinal.primary_assessment.top_condition})</span></>
+                  : 'Retinal AI'}
+              </span>
+            </button>
+
+            {/* Lens & Corneal Clarity Top Button (Milestone 5.5 Cataract & Arcus) */}
+            <button
+              onClick={() => {
+                setActiveAiTab('CLARITY');
+                setShowAiModal(true);
+                if (!currentClarity && !isAnalyzingClarity) {
+                  handleRunClarityAnalysis();
+                }
+              }}
+              className={`flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold shadow-md transition shrink-0 ${
+                currentClarity
+                  ? currentClarity.lens_opacity.cataract_grade >= 2
+                    ? 'bg-amber-950/70 hover:bg-amber-900 border-amber-500/40 text-amber-200'
+                    : 'bg-indigo-950/70 hover:bg-indigo-900 border-indigo-500/40 text-indigo-200'
+                  : 'bg-gradient-to-r from-indigo-600/40 to-blue-600/40 hover:from-indigo-600/60 hover:to-blue-600/60 border-indigo-500/40 text-indigo-200'
+              }`}
+            >
+              <Aperture className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <span>
+                {isAnalyzingClarity
+                  ? 'Assessing...'
+                  : currentClarity
+                  ? <>Clarity <span className="hidden xl:inline">(Gr {currentClarity.lens_opacity.cataract_grade})</span></>
+                  : 'Lens Clarity'}
+              </span>
+            </button>
+          </div>
+
+          <div className="h-5 w-px bg-slate-800 shrink-0" />
+
+          {/* Action Tools */}
+          <div className="flex items-center space-x-1 shrink-0">
+            {/* Download */}
+            <button
+              onClick={handleDownload}
+              title="Download original file"
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+
+            {/* Close */}
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -474,6 +662,36 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
                   className="absolute inset-0 w-full h-full object-contain pointer-events-none rounded-lg transition-opacity duration-200"
                 />
               )}
+
+              {/* Pixel-Aligned RGBA Hyperaemia & Pterygium Overlay (Milestone 5.3) */}
+              {showOverlay && activeAiTab === 'HYPERAEMIA' && currentHyperaemia?.overlay_rgba_base64 && (
+                <img
+                  src={currentHyperaemia.overlay_rgba_base64}
+                  alt="EyeCapture AI Hyperaemia & Pterygium Overlay"
+                  style={{ opacity: overlayOpacity }}
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none rounded-lg transition-opacity duration-200"
+                />
+              )}
+
+              {/* Pixel-Aligned RGBA Retinal Foundation Overlay (Milestone 5.4 FLAIR) */}
+              {showOverlay && activeAiTab === 'RETINAL' && currentRetinal?.overlay_rgba_base64 && (
+                <img
+                  src={currentRetinal.overlay_rgba_base64}
+                  alt="VisionBridge Retinal AI Foundation Overlay"
+                  style={{ opacity: overlayOpacity }}
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none rounded-lg transition-opacity duration-200"
+                />
+              )}
+
+              {/* Pixel-Aligned RGBA Lens & Corneal Clarity Overlay (Milestone 5.5) */}
+              {showOverlay && activeAiTab === 'CLARITY' && currentClarity?.overlay_rgba_base64 && (
+                <img
+                  src={currentClarity.overlay_rgba_base64}
+                  alt="VisionBridge Lens & Corneal Clarity Overlay"
+                  style={{ opacity: overlayOpacity }}
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none rounded-lg transition-opacity duration-200"
+                />
+              )}
             </div>
           </div>
 
@@ -513,7 +731,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
         </div>
 
         {/* Right: DETAILS IMAGE PANEL (Metadata, AI Modules & Optometrist Review) */}
-        <div className="w-full lg:w-96 bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-800 flex flex-col h-auto lg:h-full overflow-y-auto">
+        <div className="w-full lg:w-96 bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-800 flex flex-col h-auto lg:h-full overflow-y-auto custom-scrollbar-dark">
           
           <div className="p-5 space-y-5">
             
@@ -866,6 +1084,414 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
               )}
             </div>
 
+            {/* MODULE 3: Ocular Surface & Hyperaemia Telemetry (Milestone 5.3 Efron Redness & Pterygium) */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-rose-900/40 space-y-3 shadow-inner">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-200 flex items-center gap-1.5 text-xs">
+                  <Flame className="w-4 h-4 text-rose-400" />
+                  Ocular Surface & Redness Telemetry
+                </span>
+                {currentHyperaemia && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-800 font-semibold">
+                    EFRON {currentHyperaemia.hyperaemia.efron_grade}/4
+                  </span>
+                )}
+              </div>
+
+              {isAnalyzingHyperaemia ? (
+                <div className="p-3 bg-rose-950/40 rounded-lg border border-rose-800/60 flex items-center space-x-2 text-rose-300 text-xs">
+                  <Loader2 className="w-4 h-4 animate-spin text-rose-400 shrink-0" />
+                  <span>Segmenting sclera, quantifying vascular redness & pterygium...</span>
+                </div>
+              ) : currentHyperaemia ? (
+                <div className="space-y-3 text-xs">
+                  {/* Hyperaemia Grade Card */}
+                  <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400 font-medium">Bulbar Redness:</span>
+                      <span className="font-bold text-rose-300">
+                        {currentHyperaemia.hyperaemia.efron_grade_name}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-slate-300">
+                      <span>Vascular Density:</span>
+                      <span className="font-mono text-white font-bold">{currentHyperaemia.hyperaemia.vascular_density_pct}%</span>
+                    </div>
+                    <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-rose-500 h-full rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, currentHyperaemia.hyperaemia.efron_grade * 25)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pterygium Status Card */}
+                  <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400 font-medium">Pterygium Screening:</span>
+                      <span className={`font-bold ${currentHyperaemia.pterygium.detected ? 'text-amber-300' : 'text-emerald-400'}`}>
+                        {currentHyperaemia.pterygium.detected ? `Detected (${currentHyperaemia.pterygium.encroachment_zone})` : 'Clear Limbic Margin'}
+                      </span>
+                    </div>
+
+                    {currentHyperaemia.pterygium.detected && (
+                      <div className="grid grid-cols-2 gap-1.5 pt-1 text-[10px] font-mono">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Limbal Invasion:</span>
+                          <span className="text-amber-300 font-bold">{currentHyperaemia.pterygium.limbic_invasion_mm} mm</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Pupil Margin:</span>
+                          <span className="text-white font-bold">{currentHyperaemia.pterygium.pupil_clearance_mm} mm</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Guidance Note */}
+                  <p className="text-[10px] text-slate-300 bg-slate-900/60 p-2 rounded-lg border border-slate-800/80 leading-relaxed">
+                    {currentHyperaemia.hyperaemia.clinical_guidance}
+                  </p>
+
+                  {/* Overlay Toggle */}
+                  {currentHyperaemia.overlay_rgba_base64 && (
+                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800">
+                      <label className="flex items-center space-x-1.5 cursor-pointer text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={showOverlay && activeAiTab === 'HYPERAEMIA'}
+                          onChange={(e) => {
+                            setActiveAiTab('HYPERAEMIA');
+                            setShowOverlay(e.target.checked);
+                          }}
+                          className="rounded bg-slate-800 border-slate-700 text-rose-500 focus:ring-0"
+                        />
+                        <span>Show Redness & Vessels Overlay</span>
+                      </label>
+                      <span className="text-[10px] text-rose-400 font-mono">Efron 0-4</span>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="pt-1 flex items-center justify-between">
+                    <button
+                      onClick={handleRunHyperaemiaAnalysis}
+                      className="text-[11px] text-rose-400 hover:text-rose-300 font-medium flex items-center gap-1 transition"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Re-check Redness
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveAiTab('HYPERAEMIA');
+                        setShowAiModal(true);
+                      }}
+                      className="text-[11px] text-slate-400 hover:text-white font-medium underline transition"
+                    >
+                      Enlarge Surface Studio
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-[11px] text-slate-400">
+                    Quantify conjunctival vascular redness on the Efron scale (0-4) and screen for pterygium limbal encroachment.
+                  </p>
+                  <button
+                    onClick={handleRunHyperaemiaAnalysis}
+                    className="w-full py-2 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs transition flex items-center justify-center space-x-1.5 shadow"
+                  >
+                    <Flame className="w-3.5 h-3.5" />
+                    <span>Run Ocular Surface & Redness Analysis</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* MODULE 4: Retinal Foundation AI Panel (Milestone 5.4 FLAIR Zero-Shot Model) */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-teal-900/40 space-y-3 shadow-inner">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-200 flex items-center gap-1.5 text-xs">
+                  <CircleDot className="w-4 h-4 text-teal-400" />
+                  Retinal AI (FLAIR Foundation Model)
+                </span>
+                {isAnalyzingRetinal ? (
+                  <span className="flex items-center gap-1 text-[11px] text-teal-400 font-medium">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Evaluating...
+                  </span>
+                ) : currentRetinal ? (
+                  <span
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                      currentRetinal.decision_support?.triage_urgency === 'URGENT_RETINA_SPECIALIST'
+                        ? 'bg-red-950/80 text-red-300 border-red-800'
+                        : currentRetinal.decision_support?.triage_urgency === 'ELECTIVE_OPHTHALMOLOGY_CONSULT'
+                        ? 'bg-amber-950/80 text-amber-300 border-amber-800'
+                        : 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                    }`}
+                  >
+                    {currentRetinal.decision_support?.triage_urgency.replace(/_/g, ' ') || 'ANALYZED'}
+                  </span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                    Zero-Shot CFP
+                  </span>
+                )}
+              </div>
+
+              {currentRetinal ? (
+                <div className="space-y-3 pt-1">
+                  {/* Domain Warning if applicable */}
+                  {currentRetinal.domain_metrics && !currentRetinal.domain_metrics.is_fundus && (
+                    <div className="p-2.5 bg-amber-950/40 rounded-lg border border-amber-800/60 text-[11px] text-amber-200 space-y-1">
+                      <div className="flex items-center gap-1 font-bold text-amber-300">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>Domain Gating Notice</span>
+                      </div>
+                      <p className="text-[10px] leading-tight text-amber-200/90">
+                        Image characteristics deviate from standard circular CFP (R/B: {currentRetinal.domain_metrics.red_to_blue_ratio}). Results may be out-of-distribution.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Primary Finding Card */}
+                  {currentRetinal.primary_assessment && (
+                    <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-400 font-medium">Top Ophthalmic Finding:</span>
+                        <span className="font-bold text-white">
+                          {currentRetinal.primary_assessment.confidence_pct.toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="text-sm font-bold text-teal-300 capitalize">
+                        {currentRetinal.primary_assessment.top_condition}
+                      </div>
+                      <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className="bg-teal-400 h-full rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(100, Math.round(currentRetinal.primary_assessment.confidence_pct))}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between items-center text-[10px] text-slate-400 pt-0.5">
+                        <span>Model: ResNet-50 + Bio_ClinicalBERT</span>
+                        <span>Latency: {currentRetinal.model_metadata?.latency_ms || 0} ms</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Category Breakdown Highlights */}
+                  {currentRetinal.clinical_categories && (
+                    <div className="space-y-1.5 text-[11px]">
+                      {currentRetinal.clinical_categories.diabetic_retinopathy && (
+                        <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800/70">
+                          <span className="text-slate-300">Diabetic Retinopathy</span>
+                          <span className="font-mono text-white text-[10px] font-bold">
+                            {currentRetinal.clinical_categories.diabetic_retinopathy.top_stage} ({currentRetinal.clinical_categories.diabetic_retinopathy.confidence_pct.toFixed(0)}%)
+                          </span>
+                        </div>
+                      )}
+                      {currentRetinal.clinical_categories.macular_integrity && (
+                        <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800/70">
+                          <span className="text-slate-300">Macular Integrity</span>
+                          <span className="font-mono text-white text-[10px] font-bold">
+                            {currentRetinal.clinical_categories.macular_integrity.top_finding} ({currentRetinal.clinical_categories.macular_integrity.confidence_pct.toFixed(0)}%)
+                          </span>
+                        </div>
+                      )}
+                      {currentRetinal.clinical_categories.glaucoma_screening && (
+                        <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900/60 border border-slate-800/70">
+                          <span className="text-slate-300">Glaucomatous Disc</span>
+                          <span className="font-mono text-white text-[10px] font-bold">
+                            {currentRetinal.clinical_categories.glaucoma_screening.top_finding} ({currentRetinal.clinical_categories.glaucoma_screening.confidence_pct.toFixed(0)}%)
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Referral Directive */}
+                  {currentRetinal.decision_support?.clinical_advice && (
+                    <p className="text-[10px] text-slate-300 bg-slate-900/60 p-2 rounded-lg border border-slate-800/80 leading-relaxed">
+                      {currentRetinal.decision_support.clinical_advice}
+                    </p>
+                  )}
+
+                  {/* Overlay Toggle */}
+                  {currentRetinal.overlay_rgba_base64 && (
+                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800">
+                      <label className="flex items-center space-x-1.5 cursor-pointer text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={showOverlay && activeAiTab === 'RETINAL'}
+                          onChange={(e) => {
+                            setActiveAiTab('RETINAL');
+                            setShowOverlay(e.target.checked);
+                          }}
+                          className="rounded bg-slate-800 border-slate-700 text-teal-500 focus:ring-0"
+                        />
+                        <span>Show Retinal Foundation Overlay</span>
+                      </label>
+                      <span className="text-[10px] text-teal-400 font-mono">CFP Mask</span>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="pt-1 flex items-center justify-between">
+                    <button
+                      onClick={() => handleRunRetinalAnalysis(true)}
+                      className="text-[11px] text-teal-400 hover:text-teal-300 font-medium flex items-center gap-1 transition"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Re-evaluate Fundus
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveAiTab('RETINAL');
+                        setShowAiModal(true);
+                      }}
+                      className="text-[11px] text-slate-400 hover:text-white font-medium underline transition"
+                    >
+                      Enlarge Retinal Studio
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-[11px] text-slate-400">
+                    Zero-shot Color Fundus Photography (CFP) evaluation across Diabetic Retinopathy, Macular Pathologies, and Glaucoma using FLAIR foundation model.
+                  </p>
+                  {currentImage.imageType !== 'FUNDUS_RETINAL' && (
+                    <div className="text-[10px] text-amber-400/90 bg-amber-950/30 p-2 rounded border border-amber-900/40">
+                      Current label: <span className="font-semibold">{currentImage.imageType}</span>. FLAIR expects Color Fundus Photography.
+                    </div>
+                  )}
+                  <button
+                    onClick={() => handleRunRetinalAnalysis(false)}
+                    className="w-full py-2 px-3 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs transition flex items-center justify-center space-x-1.5 shadow"
+                  >
+                    <CircleDot className="w-3.5 h-3.5" />
+                    <span>Run Retinal Foundation Analysis</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* MODULE 5: Lens & Corneal Clarity Engine (Milestone 5.5 Cataract & Arcus) */}
+            <div className="p-4 rounded-xl bg-slate-950 border border-indigo-900/40 space-y-3 shadow-inner">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-200 flex items-center gap-1.5 text-xs">
+                  <Aperture className="w-4 h-4 text-indigo-400" />
+                  Lens & Corneal Clarity (Cataract/Arcus)
+                </span>
+                {currentClarity && (
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
+                    currentClarity.lens_opacity.cataract_grade >= 2
+                      ? 'bg-amber-950 text-amber-300 border-amber-800'
+                      : 'bg-indigo-950 text-indigo-300 border-indigo-800'
+                  }`}>
+                    CATARACT GR {currentClarity.lens_opacity.cataract_grade}
+                  </span>
+                )}
+              </div>
+
+              {isAnalyzingClarity ? (
+                <div className="p-3 bg-indigo-950/40 rounded-lg border border-indigo-800/60 flex items-center space-x-2 text-indigo-300 text-xs">
+                  <Loader2 className="w-4 h-4 animate-spin text-indigo-400 shrink-0" />
+                  <span>Measuring crystalline lens opacity & limbal arcus ring...</span>
+                </div>
+              ) : currentClarity ? (
+                <div className="space-y-3 text-xs">
+                  {/* Lens Opacity Status */}
+                  <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400 font-medium">Lens Opacity:</span>
+                      <span className={`font-bold ${currentClarity.lens_opacity.cataract_grade >= 2 ? 'text-amber-300' : 'text-indigo-300'}`}>
+                        {currentClarity.lens_opacity.grade_name}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-slate-300">
+                      <span>Opacity Fraction:</span>
+                      <span className="font-mono text-white font-bold">{currentClarity.lens_opacity.opacity_area_fraction_pct}%</span>
+                    </div>
+                    <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          currentClarity.lens_opacity.cataract_grade >= 2 ? 'bg-amber-400' : 'bg-indigo-400'
+                        }`}
+                        style={{ width: `${Math.min(100, Math.max(8, currentClarity.lens_opacity.cataract_grade * 33))}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Arcus Senilis Status */}
+                  <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400 font-medium">Corneal Arcus:</span>
+                      <span className={`font-bold ${currentClarity.corneal_arcus.arcus_detected ? 'text-sky-300' : 'text-emerald-400'}`}>
+                        {currentClarity.corneal_arcus.arcus_detected ? `Detected (${currentClarity.corneal_arcus.extent_degrees}°)` : 'Clear Limbal Margin'}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                      {currentClarity.corneal_arcus.span_description}
+                    </p>
+                  </div>
+
+                  {/* Advice Note */}
+                  <p className="text-[10px] text-slate-300 bg-slate-900/60 p-2 rounded-lg border border-slate-800/80 leading-relaxed">
+                    {currentClarity.lens_opacity.clinical_advice}
+                  </p>
+
+                  {/* Overlay Toggle */}
+                  {currentClarity.overlay_rgba_base64 && (
+                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800">
+                      <label className="flex items-center space-x-1.5 cursor-pointer text-slate-300">
+                        <input
+                          type="checkbox"
+                          checked={showOverlay && activeAiTab === 'CLARITY'}
+                          onChange={(e) => {
+                            setActiveAiTab('CLARITY');
+                            setShowOverlay(e.target.checked);
+                          }}
+                          className="rounded bg-slate-800 border-slate-700 text-indigo-500 focus:ring-0"
+                        />
+                        <span>Show Lens Caliper Overlay</span>
+                      </label>
+                      <span className="text-[10px] text-indigo-400 font-mono">Ø {currentClarity.calibration.pupil_diameter_mm}mm</span>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="pt-1 flex items-center justify-between">
+                    <button
+                      onClick={handleRunClarityAnalysis}
+                      className="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 transition"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Re-check Clarity
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveAiTab('CLARITY');
+                        setShowAiModal(true);
+                      }}
+                      className="text-[11px] text-slate-400 hover:text-white font-medium underline transition"
+                    >
+                      Enlarge Clarity Studio
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-[11px] text-slate-400">
+                    Quantify crystalline lens pupillary opacity (cataract staging proxy) and screen for peripheral corneal arcus ring.
+                  </p>
+                  <button
+                    onClick={handleRunClarityAnalysis}
+                    className="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition flex items-center justify-center space-x-1.5 shadow"
+                  >
+                    <Aperture className="w-3.5 h-3.5" />
+                    <span>Run Lens & Corneal Clarity Analysis</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Clinical Metadata List */}
             <div className="bg-slate-950/60 rounded-xl p-4 border border-slate-800/80 space-y-2.5 text-xs">
               <div className="flex items-center justify-between text-slate-400">
@@ -1088,34 +1714,104 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
       {/* Enlarged EyeCapture AI Studio Modal Drawer */}
       {showAiModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 text-white shadow-2xl relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl max-w-3xl w-full p-6 text-white shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar-dark">
             
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-purple-400">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-purple-400 shadow-lg shadow-purple-500/10">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    VisionBridge EyeCapture AI Studio
+                    VisionBridge Multi-Modal EyeCapture AI Studio
                   </h3>
                   <span className="text-xs text-slate-400 font-mono">
-                    Target Image: {currentImage.imageId} ({currentImage.eyeSide})
+                    Target Image: {currentImage.imageId} ({currentImage.eyeSide}) · Modality: {currentImage.imageType.replace(/_/g, ' ')}
                   </span>
                 </div>
               </div>
 
               <button
                 onClick={() => setShowAiModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* TAB SELECTOR: Anterior AI vs Adnexal Telemetry */}
-            <div className="flex items-center space-x-2 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-5">
+            {/* UNIFIED EXECUTIVE MULTI-MODAL SCREENING DOSSIER */}
+            <div className="p-3.5 mb-5 rounded-xl bg-slate-950/80 border border-slate-800/90 shadow-inner space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5 uppercase tracking-wider">
+                  <FileCheck className="w-4 h-4 text-cyan-400" />
+                  Clinical AI Tele-Screening Executive Summary
+                </span>
+                <span className="text-[10px] font-mono text-slate-400">
+                  5 Modular Engines Active
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-center text-[11px]">
+                {/* 1. Anterior Quality */}
+                <div className="p-2 rounded-lg bg-slate-900/90 border border-slate-800 space-y-0.5">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Image QA</span>
+                  <span className={`font-bold block ${currentAnalysis ? (currentAnalysis.quality.status === 'USABLE_FOR_ANALYSIS' ? 'text-emerald-400' : 'text-rose-400') : 'text-slate-500'}`}>
+                    {currentAnalysis ? `${currentAnalysis.quality.overall_score}%` : 'Pending'}
+                  </span>
+                  <span className="text-[9px] text-slate-500 block truncate">
+                    {currentAnalysis ? currentAnalysis.quality.status.replace(/_/g, ' ') : 'Not run'}
+                  </span>
+                </div>
+
+                {/* 2. Adnexal Biometry */}
+                <div className="p-2 rounded-lg bg-slate-900/90 border border-slate-800 space-y-0.5">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Ptosis / PFH</span>
+                  <span className={`font-bold block ${currentAdnexal ? (currentAdnexal.potential_ptosis ? 'text-amber-300' : 'text-cyan-300') : 'text-slate-500'}`}>
+                    {currentAdnexal ? (currentAdnexal.right_eye ? `${currentAdnexal.right_eye.estimated_pfh_mm}mm` : 'Bilateral') : 'Pending'}
+                  </span>
+                  <span className="text-[9px] text-slate-500 block truncate">
+                    {currentAdnexal ? (currentAdnexal.potential_ptosis ? 'Asymmetry' : 'Symmetric') : 'Not run'}
+                  </span>
+                </div>
+
+                {/* 3. Surface Hyperaemia */}
+                <div className="p-2 rounded-lg bg-slate-900/90 border border-slate-800 space-y-0.5">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Redness</span>
+                  <span className={`font-bold block ${currentHyperaemia ? (currentHyperaemia.hyperaemia.efron_grade >= 2 ? 'text-rose-400' : 'text-emerald-400') : 'text-slate-500'}`}>
+                    {currentHyperaemia ? `Efron Gr ${currentHyperaemia.hyperaemia.efron_grade}` : 'Pending'}
+                  </span>
+                  <span className="text-[9px] text-slate-500 block truncate">
+                    {currentHyperaemia ? `${currentHyperaemia.hyperaemia.vascular_density_pct}% coverage` : 'Not run'}
+                  </span>
+                </div>
+
+                {/* 4. Lens Clarity */}
+                <div className="p-2 rounded-lg bg-slate-900/90 border border-slate-800 space-y-0.5">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Lens Opacity</span>
+                  <span className={`font-bold block ${currentClarity ? (currentClarity.lens_opacity.cataract_grade >= 2 ? 'text-amber-400' : 'text-indigo-300') : 'text-slate-500'}`}>
+                    {currentClarity ? `Gr ${currentClarity.lens_opacity.cataract_grade} Cataract` : 'Pending'}
+                  </span>
+                  <span className="text-[9px] text-slate-500 block truncate">
+                    {currentClarity ? (currentClarity.corneal_arcus.arcus_detected ? 'Arcus noted' : 'Clear cornea') : 'Not run'}
+                  </span>
+                </div>
+
+                {/* 5. Retinal Fundus */}
+                <div className="p-2 rounded-lg bg-slate-900/90 border border-slate-800 space-y-0.5 col-span-2 sm:col-span-1">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 block font-medium">Retina (FLAIR)</span>
+                  <span className={`font-bold block ${currentRetinal ? (currentRetinal.decision_support?.triage_urgency === 'URGENT_RETINA_SPECIALIST' ? 'text-red-400' : currentRetinal.decision_support?.triage_urgency === 'ELECTIVE_OPHTHALMOLOGY_CONSULT' ? 'text-amber-300' : 'text-teal-300') : 'text-slate-500'}`}>
+                    {currentRetinal ? (currentRetinal.decision_support?.referral_indicated ? 'Referral' : 'Routine') : 'Pending'}
+                  </span>
+                  <span className="text-[9px] text-slate-500 block truncate">
+                    {currentRetinal?.primary_assessment ? currentRetinal.primary_assessment.top_condition : 'CFP model'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* TAB SELECTOR: Anterior AI vs Adnexal vs Hyperaemia vs Lens Clarity vs Retinal */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-5">
               <button
                 type="button"
                 onClick={() => {
@@ -1124,14 +1820,14 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
                     handleRunAiAnalysis(false);
                   }
                 }}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-2 ${
+                className={`py-2 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
                   activeAiTab === 'ANTERIOR'
                     ? 'bg-purple-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white hover:bg-slate-900'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Anterior Anatomy (Sclera/Iris/Pupil)</span>
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Anterior QA</span>
               </button>
 
               <button
@@ -1142,14 +1838,68 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
                     handleRunAdnexalAnalysis();
                   }
                 }}
-                className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-2 ${
+                className={`py-2 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
                   activeAiTab === 'ADNEXAL'
                     ? 'bg-cyan-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white hover:bg-slate-900'
                 }`}
               >
-                <Ruler className="w-3.5 h-3.5" />
-                <span>Adnexal & Alignment (Ptosis/Strabismus)</span>
+                <Ruler className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Ptosis / PFH</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveAiTab('HYPERAEMIA');
+                  if (!currentHyperaemia && !isAnalyzingHyperaemia) {
+                    handleRunHyperaemiaAnalysis();
+                  }
+                }}
+                className={`py-2 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
+                  activeAiTab === 'HYPERAEMIA'
+                    ? 'bg-rose-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
+              >
+                <Flame className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Redness (Efron)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveAiTab('CLARITY');
+                  if (!currentClarity && !isAnalyzingClarity) {
+                    handleRunClarityAnalysis();
+                  }
+                }}
+                className={`py-2 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
+                  activeAiTab === 'CLARITY'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
+              >
+                <Aperture className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Lens Clarity</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveAiTab('RETINAL');
+                  if (!currentRetinal && !isAnalyzingRetinal) {
+                    handleRunRetinalAnalysis();
+                  }
+                }}
+                className={`py-2 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center space-x-1.5 col-span-2 sm:col-span-1 ${
+                  activeAiTab === 'RETINAL'
+                    ? 'bg-teal-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
+              >
+                <CircleDot className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Retinal (FLAIR)</span>
               </button>
             </div>
 
@@ -1478,6 +2228,483 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
                       className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs"
                     >
                       Run Adnexal Telemetry Analysis
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 3: OCULAR SURFACE & REDNESS TELEMETRY (MILESTONE 5.3) */}
+            {activeAiTab === 'HYPERAEMIA' && (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-rose-400">
+                    Ocular Surface & Redness Telemetry (Efron Scale & Pterygium)
+                  </span>
+                  <button
+                    onClick={handleRunHyperaemiaAnalysis}
+                    disabled={isAnalyzingHyperaemia}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500/40 text-rose-200 font-semibold transition flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isAnalyzingHyperaemia ? 'animate-spin' : ''}`} />
+                    <span>{currentHyperaemia ? 'Re-Evaluate Redness' : 'Run Surface Analysis'}</span>
+                  </button>
+                </div>
+
+                {isAnalyzingHyperaemia ? (
+                  <div className="p-12 flex flex-col items-center justify-center space-y-3 bg-slate-950 rounded-2xl border border-slate-800">
+                    <Loader2 className="w-8 h-8 animate-spin text-rose-400" />
+                    <p className="text-sm font-medium text-rose-200">Segmenting scleral microvasculature & calculating Efron redness...</p>
+                    <span className="text-xs text-slate-500 font-mono">Differential vascular response filter R - (G+B)/2</span>
+                  </div>
+                ) : currentHyperaemia ? (
+                  <div className="space-y-4">
+                    {/* Efron Scale Overview Banner */}
+                    <div className="p-4 bg-slate-950 rounded-xl border border-rose-900/40 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-xs text-slate-400 block font-medium">Bulbar Hyperaemia Severity</span>
+                          <span className="text-base font-bold text-rose-300">
+                            {currentHyperaemia.hyperaemia.efron_grade_name} (Grade {currentHyperaemia.hyperaemia.efron_grade} / 4)
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-slate-400 block font-medium">Vascular Density</span>
+                          <span className="text-base font-mono font-bold text-white">
+                            {currentHyperaemia.hyperaemia.vascular_density_pct}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Efron 0 to 4 Progress Bar */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                          <span>0: Normal</span>
+                          <span>1: Trace</span>
+                          <span>2: Mild</span>
+                          <span>3: Moderate</span>
+                          <span>4: Severe</span>
+                        </div>
+                        <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              currentHyperaemia.hyperaemia.efron_grade >= 3
+                                ? 'bg-gradient-to-r from-amber-500 to-rose-500'
+                                : currentHyperaemia.hyperaemia.efron_grade >= 2
+                                ? 'bg-amber-400'
+                                : 'bg-emerald-400'
+                            }`}
+                            style={{ width: `${Math.max(5, Math.min(100, currentHyperaemia.hyperaemia.efron_grade * 25))}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="text-[11px] text-slate-400 flex justify-between pt-1 border-t border-slate-800/80">
+                        <span>Evaluated Scleral Area: <strong className="text-white font-mono">{currentHyperaemia.hyperaemia.sclera_area_px} px</strong></span>
+                        <span>Corneal Limbal Caliper Ref: <strong className="text-white font-mono">{currentHyperaemia.calibration.reference_iris_diameter_mm} mm</strong></span>
+                      </div>
+                    </div>
+
+                    {/* Pterygium Biometry Panel */}
+                    <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-sm text-slate-200 flex items-center gap-2">
+                          <Activity className="w-4 h-4 text-amber-400" />
+                          Pterygium & Corneal Limbic Encroachment
+                        </span>
+                        <span
+                          className={`text-xs px-2.5 py-1 rounded-full font-bold border ${
+                            currentHyperaemia.pterygium.detected
+                              ? 'bg-amber-950 text-amber-300 border-amber-800'
+                              : 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                          }`}
+                        >
+                          {currentHyperaemia.pterygium.detected ? 'Encroachment Detected' : 'No Encroachment'}
+                        </span>
+                      </div>
+
+                      {currentHyperaemia.pterygium.detected ? (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono">
+                            <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800">
+                              <span className="text-slate-400 text-[10px] block">Limbic Invasion</span>
+                              <span className="text-amber-300 font-bold text-sm">{currentHyperaemia.pterygium.limbic_invasion_mm} mm</span>
+                            </div>
+                            <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800">
+                              <span className="text-slate-400 text-[10px] block">Pupil Clearance</span>
+                              <span className="text-emerald-400 font-bold text-sm">{currentHyperaemia.pterygium.pupil_clearance_mm} mm</span>
+                            </div>
+                            <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800">
+                              <span className="text-slate-400 text-[10px] block">Origin Sector</span>
+                              <span className="text-cyan-300 font-bold text-sm">{currentHyperaemia.pterygium.encroachment_zone}</span>
+                            </div>
+                          </div>
+
+                          <div className="p-3 bg-amber-950/30 rounded-xl border border-amber-800/40 text-xs text-amber-200/90 space-y-1">
+                            <span className="font-bold flex items-center gap-1.5 text-amber-300">
+                              <AlertTriangle className="w-3.5 h-3.5" /> Pterygium Staging: {currentHyperaemia.pterygium.severity_grade.replace(/_/g, ' ')}
+                            </span>
+                            <p>{currentHyperaemia.pterygium.clinical_advice}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-slate-900/60 rounded-xl border border-slate-800/80 text-center text-xs text-slate-400">
+                          <p>{currentHyperaemia.pterygium.clinical_advice}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Optometrist Clinical Guidance */}
+                    <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1 text-xs">
+                      <span className="font-bold text-slate-300 text-[11px] block">Optometrist Clinical Guidance:</span>
+                      <p className="text-slate-300 leading-relaxed text-[11px]">{currentHyperaemia.hyperaemia.clinical_guidance}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center space-y-3 bg-slate-950 rounded-2xl border border-slate-800">
+                    <p className="text-xs text-slate-400">No ocular surface or hyperaemia analysis performed yet for this photograph.</p>
+                    <button
+                      onClick={handleRunHyperaemiaAnalysis}
+                      className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs"
+                    >
+                      Run Ocular Surface & Redness Analysis
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 4: RETINAL FOUNDATION AI (MILESTONE 5.4 FLAIR) */}
+            {activeAiTab === 'RETINAL' && (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-teal-400">
+                    VisionBridge Retinal AI (FLAIR Foundation Model)
+                  </span>
+                  <button
+                    onClick={() => handleRunRetinalAnalysis(true)}
+                    disabled={isAnalyzingRetinal}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-teal-600/30 hover:bg-teal-600/50 border border-teal-500/40 text-teal-200 font-semibold transition flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isAnalyzingRetinal ? 'animate-spin' : ''}`} />
+                    <span>{currentRetinal ? 'Re-Evaluate Fundus' : 'Run Retinal Analysis'}</span>
+                  </button>
+                </div>
+
+                {isAnalyzingRetinal ? (
+                  <div className="p-12 flex flex-col items-center justify-center space-y-3 bg-slate-950 rounded-2xl border border-slate-800">
+                    <Loader2 className="w-8 h-8 animate-spin text-teal-400" />
+                    <p className="text-sm font-medium text-teal-200">Executing FLAIR Vision-Language Foundation Model...</p>
+                    <span className="text-xs text-slate-500 font-mono">133.26M parameters · ResNet-50 + Bio_ClinicalBERT · Zero-Shot Cross-Attention</span>
+                  </div>
+                ) : currentRetinal ? (
+                  <div className="space-y-4">
+                    {/* Domain Gating Telemetry Banner */}
+                    <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between text-xs font-mono">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-slate-400">Domain Gating:</span>
+                        <span className={`font-bold ${currentRetinal.domain_metrics?.is_fundus ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          {currentRetinal.domain_metrics?.is_fundus ? 'VALID CFP FUNDUS' : 'OUT-OF-DISTRIBUTION WARNING'}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-3 text-slate-400 text-[11px]">
+                        <span>R/B Ratio: <strong className="text-white">{currentRetinal.domain_metrics?.red_to_blue_ratio || 'N/A'}</strong></span>
+                        <span>Perimeter Darkness: <strong className="text-white">{Math.round((currentRetinal.domain_metrics?.perimeter_dark_fraction || 0) * 100)}%</strong></span>
+                        <span>Latency: <strong className="text-white">{currentRetinal.model_metadata?.latency_ms || 0} ms</strong></span>
+                      </div>
+                    </div>
+
+                    {/* Triage Decision Support Banner */}
+                    {currentRetinal.decision_support && (
+                      <div className={`p-4 rounded-xl border space-y-2 ${
+                        currentRetinal.decision_support.triage_urgency === 'URGENT_RETINA_SPECIALIST'
+                          ? 'bg-red-950/40 border-red-800/60 text-red-200'
+                          : currentRetinal.decision_support.triage_urgency === 'ELECTIVE_OPHTHALMOLOGY_CONSULT'
+                          ? 'bg-amber-950/40 border-amber-800/60 text-amber-200'
+                          : 'bg-emerald-950/40 border-emerald-800/60 text-emerald-200'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold flex items-center gap-2 text-sm">
+                            <AlertTriangle className="w-4 h-4 shrink-0" />
+                            Triage Urgency: {currentRetinal.decision_support.triage_urgency.replace(/_/g, ' ')}
+                          </span>
+                          <span className="text-xs px-2.5 py-0.5 rounded-full font-bold bg-slate-900 border border-slate-700">
+                            {currentRetinal.decision_support.referral_indicated ? 'REFERRAL INDICATED' : 'ROUTINE OBSERVATION'}
+                          </span>
+                        </div>
+                        <p className="text-xs leading-relaxed text-slate-200">
+                          {currentRetinal.decision_support.clinical_advice}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Multi-Category Zero-Shot Predictions */}
+                    {currentRetinal.clinical_categories && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* 1. Diabetic Retinopathy */}
+                        {currentRetinal.clinical_categories.diabetic_retinopathy && (
+                          <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-slate-300">Diabetic Retinopathy (DR)</span>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-teal-300 font-bold">
+                                {currentRetinal.clinical_categories.diabetic_retinopathy.top_stage}
+                              </span>
+                            </div>
+                            <div className="space-y-1.5 pt-1">
+                              {currentRetinal.clinical_categories.diabetic_retinopathy.all_stages?.map((stage, idx) => (
+                                <div key={idx} className="space-y-0.5">
+                                  <div className="flex justify-between text-[10px]">
+                                    <span className="text-slate-400 capitalize truncate max-w-[70%]">{stage.prompt}</span>
+                                    <span className="font-mono text-slate-300">{stage.probability_pct.toFixed(1)}%</span>
+                                  </div>
+                                  <div className="w-full bg-slate-900 h-1 rounded-full overflow-hidden">
+                                    <div
+                                      className="bg-teal-500 h-full rounded-full transition-all duration-300"
+                                      style={{ width: `${Math.min(100, stage.probability_pct)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 2. Macular Integrity */}
+                        {currentRetinal.clinical_categories.macular_integrity && (
+                          <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-slate-300">Macular Integrity & Edema</span>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-teal-300 font-bold">
+                                {currentRetinal.clinical_categories.macular_integrity.top_finding}
+                              </span>
+                            </div>
+                            <div className="space-y-1.5 pt-1">
+                              {currentRetinal.clinical_categories.macular_integrity.all_findings?.map((finding, idx) => (
+                                <div key={idx} className="space-y-0.5">
+                                  <div className="flex justify-between text-[10px]">
+                                    <span className="text-slate-400 capitalize truncate max-w-[70%]">{finding.prompt}</span>
+                                    <span className="font-mono text-slate-300">{finding.probability_pct.toFixed(1)}%</span>
+                                  </div>
+                                  <div className="w-full bg-slate-900 h-1 rounded-full overflow-hidden">
+                                    <div
+                                      className="bg-teal-500 h-full rounded-full transition-all duration-300"
+                                      style={{ width: `${Math.min(100, finding.probability_pct)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 3. Glaucomatous Disc */}
+                        {currentRetinal.clinical_categories.glaucoma_screening && (
+                          <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-slate-300">Glaucomatous Neuropathy</span>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-teal-300 font-bold">
+                                {currentRetinal.clinical_categories.glaucoma_screening.top_finding}
+                              </span>
+                            </div>
+                            <div className="space-y-1.5 pt-1">
+                              {currentRetinal.clinical_categories.glaucoma_screening.all_findings?.map((finding, idx) => (
+                                <div key={idx} className="space-y-0.5">
+                                  <div className="flex justify-between text-[10px]">
+                                    <span className="text-slate-400 capitalize truncate max-w-[70%]">{finding.prompt}</span>
+                                    <span className="font-mono text-slate-300">{finding.probability_pct.toFixed(1)}%</span>
+                                  </div>
+                                  <div className="w-full bg-slate-900 h-1 rounded-full overflow-hidden">
+                                    <div
+                                      className="bg-teal-500 h-full rounded-full transition-all duration-300"
+                                      style={{ width: `${Math.min(100, finding.probability_pct)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 4. Retinal Vascular Occlusions */}
+                        {currentRetinal.clinical_categories.vascular_occlusion && (
+                          <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-slate-300">Vascular Occlusions</span>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-teal-300 font-bold">
+                                {currentRetinal.clinical_categories.vascular_occlusion.top_finding}
+                              </span>
+                            </div>
+                            <div className="space-y-1.5 pt-1">
+                              {currentRetinal.clinical_categories.vascular_occlusion.all_findings?.map((finding, idx) => (
+                                <div key={idx} className="space-y-0.5">
+                                  <div className="flex justify-between text-[10px]">
+                                    <span className="text-slate-400 capitalize truncate max-w-[70%]">{finding.prompt}</span>
+                                    <span className="font-mono text-slate-300">{finding.probability_pct.toFixed(1)}%</span>
+                                  </div>
+                                  <div className="w-full bg-slate-900 h-1 rounded-full overflow-hidden">
+                                    <div
+                                      className="bg-teal-500 h-full rounded-full transition-all duration-300"
+                                      style={{ width: `${Math.min(100, finding.probability_pct)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center space-y-3 bg-slate-950 rounded-2xl border border-slate-800">
+                    <p className="text-xs text-slate-400">No retinal foundation analysis performed yet for this photograph.</p>
+                    <button
+                      onClick={() => handleRunRetinalAnalysis(false)}
+                      className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs"
+                    >
+                      Run Retinal Foundation Analysis
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 5: LENS & CORNEAL CLARITY ENGINE (MILESTONE 5.5) */}
+            {activeAiTab === 'CLARITY' && (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-indigo-400">
+                    Lens & Corneal Clarity Studio (Cataract Opacity & Arcus Senilis)
+                  </span>
+                  <button
+                    onClick={handleRunClarityAnalysis}
+                    disabled={isAnalyzingClarity}
+                    className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-200 font-semibold transition flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isAnalyzingClarity ? 'animate-spin' : ''}`} />
+                    <span>{currentClarity ? 'Re-Evaluate Clarity' : 'Run Clarity Analysis'}</span>
+                  </button>
+                </div>
+
+                {isAnalyzingClarity ? (
+                  <div className="p-12 flex flex-col items-center justify-center space-y-3 bg-slate-950 rounded-2xl border border-slate-800">
+                    <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+                    <p className="text-sm font-medium text-indigo-200">Segmenting pupillary aperture & isolating crystalline lens scattering...</p>
+                    <span className="text-xs text-slate-500 font-mono">Shannon Entropy Texture Analysis & Limbal Polar Ring Sampling</span>
+                  </div>
+                ) : currentClarity ? (
+                  <div className="space-y-4">
+                    {/* Cataract Staging Card */}
+                    <div className="p-4 bg-slate-950 rounded-xl border border-indigo-900/40 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-xs text-slate-400 block font-medium">Crystalline Lens Opacification (WHO/LOCS III Proxy)</span>
+                          <span className="text-base font-bold text-indigo-300">
+                            {currentClarity.lens_opacity.grade_name}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs text-slate-400 block font-medium">Pupil Opacity Fraction</span>
+                          <span className="text-base font-mono font-bold text-white">
+                            {currentClarity.lens_opacity.opacity_area_fraction_pct}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Opacity Bar */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                          <span>Gr 0: Clear (&lt;12%)</span>
+                          <span>Gr 1: Early Haze (12-28%)</span>
+                          <span>Gr 2: Moderate (28-55%)</span>
+                          <span>Gr 3: Dense Mature (&gt;55%)</span>
+                        </div>
+                        <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              currentClarity.lens_opacity.cataract_grade >= 3
+                                ? 'bg-gradient-to-r from-amber-500 to-red-500'
+                                : currentClarity.lens_opacity.cataract_grade >= 2
+                                ? 'bg-amber-400'
+                                : currentClarity.lens_opacity.cataract_grade >= 1
+                                ? 'bg-indigo-400'
+                                : 'bg-emerald-400'
+                            }`}
+                            style={{ width: `${Math.max(5, Math.min(100, currentClarity.lens_opacity.cataract_grade * 33 + 5))}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Pupillary Transmission Metrics Grid */}
+                      <div className="grid grid-cols-4 gap-2 text-center text-xs font-mono pt-1">
+                        <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">
+                          <span className="text-slate-400 text-[10px] block">Mean Lum</span>
+                          <span className="text-white font-bold">{currentClarity.lens_opacity.mean_luminance}</span>
+                        </div>
+                        <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">
+                          <span className="text-slate-400 text-[10px] block">Entropy (H)</span>
+                          <span className="text-indigo-300 font-bold">{currentClarity.lens_opacity.shannon_entropy}</span>
+                        </div>
+                        <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">
+                          <span className="text-slate-400 text-[10px] block">Pupil Ø (mm)</span>
+                          <span className="text-white font-bold">{currentClarity.calibration.pupil_diameter_mm} mm</span>
+                        </div>
+                        <div className="p-2 bg-slate-900 rounded-lg border border-slate-800">
+                          <span className="text-slate-400 text-[10px] block">Ref Iris Ø</span>
+                          <span className="text-slate-300 font-bold">11.7 mm</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Corneal Arcus Senilis Panel */}
+                    <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-sm text-slate-200 flex items-center gap-2">
+                          <Sun className="w-4 h-4 text-sky-400" />
+                          Corneal Arcus (Arcus Senilis Lipid Ring)
+                        </span>
+                        <span
+                          className={`text-xs px-2.5 py-1 rounded-full font-bold border ${
+                            currentClarity.corneal_arcus.arcus_detected
+                              ? 'bg-sky-950 text-sky-300 border-sky-800'
+                              : 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                          }`}
+                        >
+                          {currentClarity.corneal_arcus.arcus_detected ? 'Arcus Detected' : 'No Arcus'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                        <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 flex justify-between items-center">
+                          <span className="text-slate-400">Angular Span:</span>
+                          <span className="text-white font-bold">{currentClarity.corneal_arcus.extent_degrees}°</span>
+                        </div>
+                        <div className="p-2.5 bg-slate-900 rounded-lg border border-slate-800 flex justify-between items-center">
+                          <span className="text-slate-400">Circumference Coverage:</span>
+                          <span className="text-sky-300 font-bold">{currentClarity.corneal_arcus.coverage_pct}%</span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-1">
+                        <span className="font-semibold text-slate-200 block">{currentClarity.corneal_arcus.span_description}</span>
+                        <p className="text-slate-400 leading-relaxed text-[11px]">{currentClarity.corneal_arcus.clinical_advice}</p>
+                      </div>
+                    </div>
+
+                    {/* Optometrist Clinical Guidance */}
+                    <div className="p-3 bg-slate-900 rounded-xl border border-slate-800 space-y-1 text-xs">
+                      <span className="font-bold text-slate-300 text-[11px] block">Optometrist Clinical Action Guidance:</span>
+                      <p className="text-slate-300 leading-relaxed text-[11px]">{currentClarity.lens_opacity.clinical_advice}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center space-y-3 bg-slate-950 rounded-2xl border border-slate-800">
+                    <p className="text-xs text-slate-400">No lens opacity or corneal clarity analysis performed yet for this photograph.</p>
+                    <button
+                      onClick={handleRunClarityAnalysis}
+                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/20"
+                    >
+                      Run Lens & Corneal Clarity Analysis
                     </button>
                   </div>
                 )}

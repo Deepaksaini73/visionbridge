@@ -290,10 +290,11 @@ export const Header: React.FC = () => {
             {/* Primary Action Button */}
             <Link
               to="/customers/new"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white text-xs font-bold shadow-healthcare hover:shadow-glow-teal transition-all active:scale-95"
+              className="shrink-0 inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white text-xs font-bold shadow-healthcare hover:shadow-glow-teal transition-all active:scale-95"
             >
               <UserPlus className="w-3.5 h-3.5" />
-              <span>Register Patient</span>
+              <span className="hidden sm:inline">Register Patient</span>
+              <span className="sm:hidden">Register</span>
             </Link>
           </div>
 
@@ -314,7 +315,7 @@ export const Header: React.FC = () => {
 
       {/* Mobile Drawer Navigation (Slide-down glass panel) */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-slate-200 glass-header px-4 pt-3 pb-6 space-y-3 animate-slide-up">
+        <div className="md:hidden border-t border-slate-200 glass-header px-4 pt-3 pb-6 space-y-3 animate-slide-up max-h-[calc(100vh-4rem)] overflow-y-auto">
           {/* Status Badges Row */}
           <div className="flex items-center justify-between pb-1">
             <AiServiceStatusBadge />

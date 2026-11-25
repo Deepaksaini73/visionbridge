@@ -41,6 +41,28 @@ export function getAuthenticatedMediaUrl(url: string | undefined | null): string
   return `${url}${separator}token=${encodeURIComponent(token)}`;
 }
 
+/**
+ * Returns the authenticated direct URL for the clinical PDF report.
+ */
+export function getClinicalReportUrl(identifier: string, isCustomer: boolean = false): string {
+  if (!identifier) return '';
+  const token = getAuthToken();
+  const endpoint = isCustomer
+    ? `/api/customers/${encodeURIComponent(identifier)}/report`
+    : `/api/screenings/${encodeURIComponent(identifier)}/pdf`;
+  return token ? `${endpoint}?token=${encodeURIComponent(token)}` : endpoint;
+}
+
+/**
+ * Opens or triggers printing/saving of the comprehensive Clinical Report (PDF)
+ * in a new secure browser tab.
+ */
+export function openClinicalReportPdf(identifier: string, isCustomer: boolean = false): void {
+  if (!identifier) return;
+  const url = getClinicalReportUrl(identifier, isCustomer);
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 export async function apiRequest<T = any>(
   endpoint: string,
   options: RequestInit = {}

@@ -250,7 +250,7 @@ export const EyeImageGallery: React.FC<EyeImageGalleryProps> = ({
               <div
                 key={image.imageId}
                 onClick={() => openViewer(image.imageId)}
-                className="group relative bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md hover:border-purple-400 transition cursor-pointer flex flex-col"
+                className="group relative bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-2xs hover:shadow-healthcare hover:border-purple-300 transition-all cursor-pointer flex flex-col"
               >
                 {/* Thumbnail Container */}
                 <div className="relative aspect-[4/3] bg-slate-900 overflow-hidden flex items-center justify-center">

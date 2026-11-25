@@ -139,6 +139,13 @@ export const login = async (req: Request, res: Response) => {
       ipAddress: req.ip,
     });
 
+    res.cookie('vb_auth_token', token, {
+      httpOnly: false,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     return res.status(200).json({
       success: true,
       message: `Signed in as demonstration ${demoUser.role.replace('_', ' ')}`,
@@ -228,6 +235,13 @@ export const login = async (req: Request, res: Response) => {
       action: 'USER_LOGIN',
       resourceType: 'AUTH',
       ipAddress: req.ip,
+    });
+
+    res.cookie('vb_auth_token', token, {
+      httpOnly: false,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000,
     });
 
     return res.status(200).json({
@@ -356,6 +370,13 @@ export const register = async (req: Request, res: Response) => {
       action: 'USER_REGISTER',
       resourceType: 'AUTH',
       ipAddress: req.ip,
+    });
+
+    res.cookie('vb_auth_token', token, {
+      httpOnly: false,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return res.status(201).json({
@@ -593,6 +614,8 @@ export const logout = (req: AuthenticatedRequest, res: Response) => {
       ipAddress: req.ip,
     });
   }
+
+  res.clearCookie('vb_auth_token');
 
   return res.status(200).json({
     success: true,

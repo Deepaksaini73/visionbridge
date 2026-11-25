@@ -18,7 +18,7 @@ import {
   Camera,
   Hospital
 } from 'lucide-react';
-import { apiRequest } from '../../services/api';
+import { apiRequest, openClinicalReportPdf } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { screeningApi } from '../../features/screening/services/screeningApi';
 import { ScreeningStatusBadge } from '../../features/screening/components/ScreeningStatusBadge';
@@ -176,15 +176,14 @@ export const ScreeningReviewPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <a
-              href={`/api/screenings/${screening.screeningId}/pdf`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition-colors"
+            <button
+              type="button"
+              onClick={() => openClinicalReportPdf(screening.screeningId)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition-colors cursor-pointer active:scale-95"
             >
               <Printer className="w-3.5 h-3.5 text-slate-500" />
               <span>Print / Download PDF</span>
-            </a>
+            </button>
           </div>
         </div>
       </div>

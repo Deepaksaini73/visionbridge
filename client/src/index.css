@@ -93,9 +93,35 @@
   .marker-highlight-teal::after {
     background: rgba(204, 251, 241, 0.85);
   }
+
+  /* Interactive card hover elevation */
+  .glass-card-hover {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .glass-card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(13, 148, 136, 0.18);
+  }
+
+  /* Table responsive wrapper */
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 1rem;
+  }
+
+  /* Scrollbar hiding utility */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
-/* Custom subtle scrollbar */
+/* Custom subtle scrollbar (Light mode) */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -107,11 +133,30 @@
 
 ::-webkit-scrollbar-thumb {
   background: #CBD5E1;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
+}
+
+/* Custom dark scrollbar for clinical image viewer modal */
+.custom-scrollbar-dark::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-track {
+  background: #0F172A;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
 /* Accessibility: Respect motion preferences */

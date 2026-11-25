@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { apiRequest, getAuthenticatedMediaUrl } from '@/services/api';
+import { apiRequest, getAuthenticatedMediaUrl, openClinicalReportPdf } from '@/services/api';
 import { INITIAL_DEMO_CUSTOMERS, DemoCustomer } from '@/services/mockData';
 import { StatCard } from '@/components/ui/StatCard';
 import { Badge, ClinicalStatusBadge } from '@/components/ui/Badge';
@@ -411,12 +411,12 @@ export const StoreDashboard: React.FC = () => {
             </div>
 
             {/* Filter Status Selector */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
               {['ALL', 'REGISTERED', 'PENDING_REVIEW', 'REVIEWED', 'REFERRAL_REQUIRED'].map((status) => (
                 <button
                   key={status}
                   onClick={() => setFilterStatus(status)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
                     filterStatus === status
                       ? 'bg-navy-950 text-white shadow-2xs font-bold'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'
@@ -431,7 +431,7 @@ export const StoreDashboard: React.FC = () => {
 
         {/* Desktop & Tablet Table View */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full min-w-[760px] text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50/70 border-b border-slate-200/80 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
                 <th className="px-6 py-3.5">Patient Details</th>
@@ -525,6 +525,15 @@ export const StoreDashboard: React.FC = () => {
                       {/* Action Buttons */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openClinicalReportPdf(displayId, true)}
+                            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/90 inline-flex items-center gap-1.5 transition-all shadow-2xs active:scale-95"
+                            title="Download or print complete clinical screening report (PDF)"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Report (PDF)</span>
+                          </button>
                           <Link
                             to={`/customers/${displayId}/interview`}
                             className="text-xs font-bold px-3 py-1.5 rounded-xl bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200/80 inline-flex items-center gap-1.5 transition-all shadow-2xs active:scale-95"
@@ -616,7 +625,15 @@ export const StoreDashboard: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-3 gap-2 pt-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => openClinicalReportPdf(displayId, true)}
+                      className="px-2 py-2 rounded-xl bg-emerald-50 text-emerald-800 text-center text-xs font-bold border border-emerald-200/90 flex items-center justify-center gap-1 shadow-2xs active:scale-95"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Report PDF</span>
+                    </button>
                     <Link
                       to={`/customers/${displayId}/interview`}
                       className="px-2 py-2 rounded-xl bg-sky-50 text-sky-800 text-center text-xs font-bold border border-sky-200/80 flex items-center justify-center gap-1"
@@ -708,11 +725,11 @@ export const StoreDashboard: React.FC = () => {
 
       {/* 5. MODAL: REGISTER NEW PATIENT */}
       {showRegisterModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-          <div className="glass-card bg-white rounded-3xl max-w-lg w-full border border-slate-200/90 shadow-2xl overflow-hidden my-8 animate-slide-up">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-navy-950/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="glass-card bg-white rounded-3xl max-w-lg w-full border border-slate-200/90 shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col animate-slide-up">
             
             {/* Modal Header */}
-            <div className="p-6 border-b border-slate-200/80 bg-slate-50/50 flex items-center justify-between">
+            <div className="p-5 sm:p-6 border-b border-slate-200/80 bg-slate-50/50 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center border border-teal-200 font-bold">
                   <UserPlus className="w-5 h-5" />
@@ -731,7 +748,7 @@ export const StoreDashboard: React.FC = () => {
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleRegisterSubmit} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleRegisterSubmit} className="p-6 space-y-4 text-xs overflow-y-auto flex-1">
               
               <div>
                 <label className="block text-slate-700 font-bold mb-1">

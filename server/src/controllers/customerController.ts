@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import { z } from 'zod';
 import { Customer, ICustomer } from '../models/Customer.js';
+import { Screening } from '../models/Screening.js';
+import { getScreeningPdfReport, IN_MEMORY_SCREENINGS } from './screeningController.js';
 import { isConnectedToDb } from '../config/db.js';
 import { AuthenticatedRequest } from '../middleware/auth.js';
 import { logAuditEvent } from '../models/AuditLog.js';
@@ -1040,6 +1042,126 @@ export const deleteProfilePhoto = async (req: AuthenticatedRequest, res: Respons
       success: false,
       error: { code: 'SERVER_ERROR', message: msg },
     });
+  }
+};
+
+/**
+ * Generates an executive, print-optimized clinical PDF report for a customer
+ * by resolving their latest clinical screening and sign-off record.
+ */
+export const getCustomerReport = async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    let customer: any = null;
+    if (isConnectedToDb) {
+      customer = await Customer.findOne({
+        $or: [
+          { customerId: id },
+          { customerCode: id },
+          { clientUuid: id },
+          { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null },
+        ],
+      });
+    }
+
+    if (!customer) {
+      customer = SEED_CUSTOMERS.find(
+        (c) => c.id === id || c.customerId === id || c.customerCode === id || c.clientUuid === id
+      );
+    }
+
+    if (!customer) {
+      return res.status(404).send('<h1>Customer Record Not Found</h1>');
+    }
+
+    if (req.user?.role === 'STORE_OPERATOR' && customer.storeId && req.user.storeId && customer.storeId !== req.user.storeId) {
+      return res.status(403).send('<h1>Access Denied: Cross-store customer report access prohibited.</h1>');
+    }
+
+    const custId = customer.customerId || customer.customerCode || customer.id || id;
+    let screening: any = null;
+
+    if (isConnectedToDb) {
+      screening = await Screening.findOne({
+        $or: [
+          { customerId: custId },
+          { customerId: customer._id?.toString() },
+          { customerCode: custId },
+        ],
+      }).sort({ createdAt: -1 });
+    }
+
+    if (!screening) {
+      screening = IN_MEMORY_SCREENINGS.find(
+        (s) => s.customerId === custId || s.customerCode === custId
+      );
+    }
+
+    if (screening) {
+      // Delegate directly to getScreeningPdfReport with the matched screening ID
+      req.params.id = screening.screeningId || screening._id?.toString();
+      return getScreeningPdfReport(req, res);
+    }
+
+    // Fallback: If screening has not yet taken place, render a clean patient intake profile summary
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VisionBridge Patient Intake - ${custId}</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.5; font-size: 12px; margin: 0; padding: 20px; }
+    .header { border-bottom: 2px solid #0d9488; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .brand { font-size: 22px; font-weight: bold; color: #0f172a; }
+    .brand span { color: #0d9488; }
+    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 14px; }
+    .card-title { font-size: 12px; font-weight: bold; color: #0f172a; text-transform: uppercase; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }
+    .row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .label { color: #64748b; font-weight: 500; }
+    .val { font-weight: 600; color: #0f172a; }
+    .notice { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 14px; border-radius: 6px; margin-top: 16px; color: #1e40af; }
+    .no-print { margin-bottom: 16px; }
+    @media print { .no-print { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <button onclick="window.print()" style="padding: 7px 16px; background: #0d9488; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+      🖨️ Print / Save as PDF
+    </button>
+  </div>
+  <div class="header">
+    <div>
+      <div class="brand">Vision<span>Bridge</span></div>
+      <div style="font-size: 11px; color: #64748b;">Community Vision Screening Network</div>
+    </div>
+    <div style="text-align: right;">
+      <div style="font-size: 13px; font-weight: bold; color: #475569;">PATIENT INTAKE RECORD</div>
+      <div style="font-family: monospace; font-size: 12px; font-weight: bold;">${custId}</div>
+      <div style="font-size: 10px; color: #64748b;">Generated: ${new Date().toLocaleDateString()}</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Customer Information</div>
+    <div class="row"><span class="label">Full Name:</span><span class="val">${customer.fullName || customer.name}</span></div>
+    <div class="row"><span class="label">Patient Code:</span><span class="val">${customer.customerId || customer.customerCode}</span></div>
+    <div class="row"><span class="label">Age / Gender:</span><span class="val">${customer.age ?? 'N/A'} yrs / ${customer.gender}</span></div>
+    <div class="row"><span class="label">Contact Phone:</span><span class="val">${customer.contactNumber || customer.phone || 'N/A'}</span></div>
+    <div class="row"><span class="label">Workflow Status:</span><span class="val">${customer.workflowStatus || 'REGISTERED'}</span></div>
+    <div class="row"><span class="label">Center / Store:</span><span class="val">${customer.storeId || 'N/A'}</span></div>
+  </div>
+  <div class="notice">
+    <strong>📋 Preliminary Vision Screening Pending</strong><br/>
+    This customer profile is registered in the VisionBridge portal. The standard 5-module preliminary screening (Tumbling-E visual acuity, Amsler grid macular evaluation, anterior eye photographs) has not yet been completed. Once the vision test is conducted and signed off by a tele-optometrist, the full comprehensive clinical report will automatically generate here.
+  </div>
+</body>
+</html>`;
+    return res.status(200).send(html);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return res.status(500).send(`<h1>Error generating customer report: ${msg}</h1>`);
   }
 };
 

@@ -19,6 +19,9 @@ from app.services.image_validator import validate_image_upload
 from app.services.quality_assessor import QualityAssessor, STATUS_RETAKE
 from app.services.segmentation_engine import get_segmentation_engine
 from app.services.adnexal_engine import get_adnexal_engine
+from app.services.hyperaemia_engine import get_hyperaemia_engine
+from app.services.retinal_engine import get_retinal_engine
+from app.services.corneal_lens_engine import get_corneal_lens_engine
 
 router = APIRouter()
 
@@ -72,12 +75,28 @@ PLANNED_CAPABILITIES = [
         planned_milestone="Milestone 5.2B (Active)"
     ),
     CapabilityItem(
-        id="fundus_cup_to_disc",
-        name="Optic Nerve Cup-to-Disc Ratio (Fundus)",
+        id="conjunctival_hyperaemia_pterygium",
+        name="Conjunctival Hyperaemia & Pterygium Telemetry",
+        category="Ocular Surface Biometry",
+        status=CapabilityStatus.IMPLEMENTED,
+        description="Quantifies bulbar microvascular density %, maps to the Efron 0-4 grading scale, and detects pterygium corneal encroachment.",
+        planned_milestone="Milestone 5.3 (Active)"
+    ),
+    CapabilityItem(
+        id="retinal_foundation_flair",
+        name="Retinal Foundation AI (FLAIR)",
         category="Posterior Telemetry",
-        status=CapabilityStatus.NOT_IMPLEMENTED,
-        description="Estimates optic cup to optic disc diameter ratio on dilated fundus photographs.",
-        planned_milestone="Milestone 5.3+"
+        status=CapabilityStatus.IMPLEMENTED,
+        description="Zero-shot contrastive vision-language representation (133.26M parameters) evaluating Diabetic Retinopathy, Glaucoma, DME, and AMD on CFP.",
+        planned_milestone="Milestone 5.4 (Active)"
+    ),
+    CapabilityItem(
+        id="corneal_lens_clarity",
+        name="Lens & Corneal Clarity Engine",
+        category="Anterior Pathologies",
+        status=CapabilityStatus.IMPLEMENTED,
+        description="Quantifies crystalline lens pupillary opacity (Cataract screening) and peripheral corneal arcus ring (Arcus Senilis) with calibrated calipers.",
+        planned_milestone="Milestone 5.5 (Active)"
     ),
 ]
 
@@ -423,4 +442,226 @@ async def analyze_adnexal_telemetry(
                 "disclaimer": "Technical assistance only. Not for standalone clinical diagnosis."
             }
         )
+
+
+# --- Milestone 5.3: Conjunctival Hyperaemia & Pterygium Endpoints ---
+
+@router.get(
+    "/api/v1/hyperaemia/status",
+    summary="Hyperaemia & Pterygium Engine Status",
+    tags=["Ocular Surface Telemetry"]
+)
+async def get_hyperaemia_status():
+    """
+    Return operational status of the Efron hyperaemia grading and
+    pterygium corneal encroachment screening engine.
+    """
+    engine = get_hyperaemia_engine()
+    return {
+        "status": "ONLINE",
+        "module": "VisionBridge Hyperaemia & Pterygium Engine",
+        "version": "1.3.0",
+        "framework": "Deterministic Computer Vision (Differential Vascular Contrast & Limbic Geometry)",
+        "supported_scales": [
+            "International Efron Grading Scale (0 to 4)",
+            "Limbic Corneal Encroachment Biometry (mm)"
+        ],
+        "metrics_computed": [
+            "Scleral Vascular Density (%)",
+            "Efron Hyperaemia Grade (0-4)",
+            "Severity Classification",
+            "Pterygium Encroachment Flag",
+            "Limbic Invasion Distance (mm)",
+            "Pupillary Margin Clearance (mm)"
+        ],
+        "regulatory_disclaimer": (
+            "Hyperaemia and pterygium telemetry provides preliminary technical decision-support. "
+            "It does NOT diagnose conjunctivitis, anterior uveitis, or determine surgical candidacy."
+        )
+    }
+
+
+@router.post(
+    "/api/v1/hyperaemia/analyze",
+    summary="Analyze Conjunctival Hyperaemia & Pterygium Encroachment",
+    tags=["Ocular Surface Telemetry"]
+)
+async def analyze_hyperaemia_and_pterygium(
+    file: UploadFile = File(..., description="Anterior ocular photograph (JPEG, PNG, WebP)"),
+    eye_side: Optional[str] = Query(None, description="Optional target eye side: RIGHT (OD) or LEFT (OS)")
+):
+    """
+    Processes an anterior segment photograph:
+    - Isolates bulbar conjunctiva/sclera and computes vascular density % mapped to the Efron scale (0-4).
+    - Delineates corneal limbus and screens for advancing fibrovascular pterygium tissue.
+    Returns quantitative telemetry, clinical guidance, and a transparent RGBA overlay.
+    """
+    try:
+        content = await file.read()
+        filename = file.filename or "anterior_capture.jpg"
+        engine = get_hyperaemia_engine()
+        result = engine.analyze_image(image_bytes=content, filename=filename, eye_side=eye_side)
+        return result
+    except Exception as exc:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "success": False,
+                "filename": file.filename or "unknown",
+                "error": f"Hyperaemia analysis failure: {str(exc)}",
+                "disclaimer": "Technical assistance only. Not for standalone clinical diagnosis."
+            }
+        )
+
+
+# --- Milestone 5.4: Production Retinal Foundation AI (FLAIR) Endpoints ---
+
+@router.get(
+    "/api/v1/retinal/status",
+    summary="Retinal Foundation AI Status",
+    tags=["Retinal Foundation AI"]
+)
+async def get_retinal_status():
+    """
+    Return operational status of the FLAIR Retinal Foundation Model.
+    """
+    engine = get_retinal_engine()
+    model_loaded = engine.model is not None
+    return {
+        "status": "ONLINE",
+        "module": "VisionBridge Retinal Foundation AI",
+        "version": "1.4.0",
+        "model_name": "FLAIR (Foundation Language-Image Model of the Retina)",
+        "checkpoint": "jusiro2/FLAIR",
+        "model_loaded": model_loaded,
+        "parameters": "133.26M (ResNet-50 Vision + Bio_ClinicalBERT Text)",
+        "license": "Apache 2.0",
+        "supported_input_modality": "Color Fundus Photography (CFP)",
+        "clinical_disease_categories": [
+            "Diabetic Retinopathy (No DR, Mild, Moderate, Severe, Proliferative)",
+            "Macular Pathology (DME, Macular Hole, AMD with Drusen, ERM)",
+            "Glaucomatous Optic Neuropathy (Optic cup enlargement)",
+            "Retinal Vascular Occlusion (BRVO/CRVO, CRAO)"
+        ],
+        "regulatory_disclaimer": (
+            "FLAIR provides preliminary zero-shot clinical decision-support and similarity scoring. "
+            "It does NOT replace dilated fundus biomicroscopy, optical coherence tomography (OCT), or medical diagnosis."
+        )
+    }
+
+
+@router.post(
+    "/api/v1/retinal/analyze",
+    summary="Analyze Color Retinal Fundus Photograph",
+    tags=["Retinal Foundation AI"]
+)
+async def analyze_retinal_photograph(
+    file: UploadFile = File(..., description="Color Retinal Fundus Photograph (CFP) (JPEG, PNG, WebP)"),
+    eye_side: Optional[str] = Query(None, description="Optional target eye side: RIGHT (OD) or LEFT (OS)"),
+    force: bool = Query(False, description="Bypass fundus pre-flight domain gate")
+):
+    """
+    Processes a Color Retinal Fundus Photograph:
+    - Performs pre-flight domain validation to ensure input is a true fundus photograph.
+    - Executes zero-shot FLAIR inference across Diabetic Retinopathy, Macular, Glaucoma, and Vascular Occlusion categories.
+    - Computes referral urgency flags and generates diagnostic fundus overlay.
+    """
+    try:
+        content = await file.read()
+        filename = file.filename or "fundus_capture.jpg"
+        engine = get_retinal_engine()
+        result = engine.analyze_image(
+            image_bytes=content,
+            filename=filename,
+            eye_side=eye_side,
+            force_inference=force
+        )
+        return result
+    except Exception as exc:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "success": False,
+                "is_fundus_image": False,
+                "filename": file.filename or "unknown",
+                "error": f"Retinal analysis pipeline failure: {str(exc)}",
+                "disclaimer": "Technical assistance only. Not for standalone clinical diagnosis."
+            }
+        )
+
+
+# --- Milestone 5.5: Lens & Corneal Clarity Engine (Cataract & Arcus Senilis) Endpoints ---
+
+@router.get(
+    "/api/v1/clarity/status",
+    summary="Lens & Corneal Clarity Engine Status",
+    tags=["Lens & Corneal Clarity"]
+)
+async def get_clarity_status():
+    """
+    Return operational status of the Lens & Corneal Clarity assessment engine.
+    """
+    return {
+        "status": "ONLINE",
+        "module": "VisionBridge Lens & Corneal Clarity Engine",
+        "version": "1.5.0",
+        "framework": "Deterministic Computer Vision (Pupillary Transmission & Limbal Radial Sampling)",
+        "supported_screens": [
+            "Crystalline Lens Opacity Grading (Proxy WHO / LOCS III Cataract Scale 0-3)",
+            "Corneal Arcus Senilis Extent (Degrees & Clock-Hours Span)",
+            "Pupillary Margin Optical Transmission & Shannon Entropy"
+        ],
+        "metrics_computed": [
+            "Mean Pupillary Transmission Luminance",
+            "Shannon Entropy Heterogeneity",
+            "Opacity Area Fraction (%)",
+            "Cataract Severity Stage (0-3)",
+            "Arcus Senilis Flag & Angular Extent (°)",
+            "Calibrated Pupil Diameter (mm)"
+        ],
+        "regulatory_disclaimer": (
+            "Lens & corneal clarity telemetry provides preliminary technical screening assistance. "
+            "It does NOT diagnose cataracts, corneal dystrophies, or dyslipidemia."
+        )
+    }
+
+
+@router.post(
+    "/api/v1/clarity/analyze",
+    summary="Analyze Anterior Eye for Lens Opacity & Corneal Arcus",
+    tags=["Lens & Corneal Clarity"]
+)
+async def analyze_corneal_lens_clarity(
+    file: UploadFile = File(..., description="Anterior eye photograph (JPEG, PNG, WebP)"),
+    eye_side: Optional[str] = Query(None, description="Target eye side: RIGHT (OD), LEFT (OS), or BOTH")
+):
+    """
+    Processes an anterior segment eye photograph:
+    - Segments the circular pupillary aperture and removes specular corneal glares.
+    - Computes mean pupillary luminance, grayscale histogram Shannon entropy, and opacity fraction.
+    - Grades lens opacity across Grades 0 to 3.
+    - Performs radial polar sampling along the peripheral corneal limbus to detect arcus senilis.
+    - Generates pixel-aligned transparent RGBA overlay highlighting opacity clusters and limbal arcus.
+    """
+    try:
+        content = await file.read()
+        filename = file.filename or "eye_capture.jpg"
+        engine = get_corneal_lens_engine()
+        result = engine.analyze_image(
+            image_bytes=content,
+            filename=filename,
+            eye_side=eye_side
+        )
+        return result
+    except Exception as exc:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "success": False,
+                "filename": file.filename or "unknown",
+                "error": f"Clarity analysis pipeline failure: {str(exc)}",
+                "disclaimer": "Technical assistance only. Not for standalone clinical diagnosis."
+            }
+        )
+
 
