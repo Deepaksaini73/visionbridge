@@ -168,7 +168,10 @@ export async function getAiServiceHealth(_req: Request, res: Response): Promise<
         success: true,
         connected: true,
         service: 'VisionBridge AI & Computer Vision Microservice',
-        data,
+        data: {
+          ...data,
+          connected: true,
+        },
       });
       return;
     }

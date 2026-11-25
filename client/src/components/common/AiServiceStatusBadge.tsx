@@ -10,10 +10,21 @@ export const AiServiceStatusBadge: React.FC<{ className?: string }> = ({ classNa
   const checkStatus = async () => {
     setIsChecking(true);
     try {
-      const res = await apiRequest<{ connected: boolean; service?: string; data?: any }>('/ai/health');
-      if (res.success && res.data?.connected) {
+      const res = await apiRequest<any>('/ai/health');
+      const payload = res.data || res;
+      const isLive = Boolean(
+        res.success && (
+          (res as any).connected === true ||
+          payload.connected === true ||
+          payload.status === 'healthy' ||
+          payload.status === 'ONLINE' ||
+          payload.data?.status === 'healthy'
+        )
+      );
+      if (isLive) {
         setIsConnected(true);
-        setServiceInfo(res.data.data?.api_version ? `v${res.data.data.api_version}` : 'Active');
+        const version = payload.api_version || payload.data?.api_version;
+        setServiceInfo(version ? `v${version}` : 'Active');
       } else {
         setIsConnected(false);
         setServiceInfo(null);
