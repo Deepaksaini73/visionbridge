@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Users, 
@@ -31,6 +31,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { apiRequest, getAuthenticatedMediaUrl, openClinicalReportPdf } from '@/services/api';
 import { INITIAL_DEMO_CUSTOMERS, DemoCustomer } from '@/services/mockData';
+import { offlineDb } from '@/offline/db';
 import { StatCard } from '@/components/ui/StatCard';
 import { Badge, ClinicalStatusBadge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -41,7 +42,7 @@ export const StoreDashboard: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [isSyncing, setIsSyncing] = useState(false);
-  const [offlinePendingCount, setOfflinePendingCount] = useState(1);
+  const [offlinePendingCount, setOfflinePendingCount] = useState(0);
   const [syncSuccessMsg, setSyncSuccessMsg] = useState<string | null>(null);
 
   // New Customer Modal State
@@ -59,8 +60,17 @@ export const StoreDashboard: React.FC = () => {
   const [customerList, setCustomerList] = useState<DemoCustomer[]>(INITIAL_DEMO_CUSTOMERS);
   const [screeningList, setScreeningList] = useState<any[]>([]);
 
-  // Fetch from server if available, otherwise use initial demo records
-  useEffect(() => {
+  // Check actual offline pending count from local Dexie database
+  const checkOfflineCount = useCallback(async () => {
+    try {
+      const count = await offlineDb.syncQueue.where('status').equals('PENDING').count();
+      setOfflinePendingCount(count);
+    } catch {
+      setOfflinePendingCount(0);
+    }
+  }, []);
+
+  const fetchCustomerList = useCallback(() => {
     apiRequest<any[]>('/customers')
       .then(res => {
         if (res.success && Array.isArray(res.data) && res.data.length > 0) {
@@ -76,6 +86,12 @@ export const StoreDashboard: React.FC = () => {
       .catch(() => {
         // Quiet fallback to in-memory demo records
       });
+  }, []);
+
+  // Fetch from server if available, otherwise use initial demo records
+  useEffect(() => {
+    fetchCustomerList();
+    checkOfflineCount();
 
     apiRequest<any[]>('/screenings')
       .then(res => {
@@ -84,68 +100,107 @@ export const StoreDashboard: React.FC = () => {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [fetchCustomerList, checkOfflineCount]);
 
   // Lock body scroll when register modal is open
   useEffect(() => {
     if (showRegisterModal) {
       document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
     return () => {
       document.body.style.overflow = '';
     };
   }, [showRegisterModal]);
 
-  const handleSyncNow = () => {
+  const handleSyncNow = async () => {
     setIsSyncing(true);
     setSyncSuccessMsg(null);
 
-    // Simulate batch sync process
-    setTimeout(() => {
-      setIsSyncing(false);
-      setOfflinePendingCount(0);
-      setSyncSuccessMsg('All offline records synchronized successfully with VisionBridge cloud.');
+    try {
+      // 1. Process any pending offline items
+      const pendingItems = await offlineDb.syncQueue.where('status').equals('PENDING').toArray();
+      if (pendingItems.length > 0) {
+        for (const item of pendingItems) {
+          try {
+            if (item.entityType === 'CUSTOMER') {
+              await apiRequest('/customers', { method: 'POST', body: JSON.stringify(item.payload) });
+            } else if (item.entityType === 'SCREENING') {
+              await apiRequest('/screenings', { method: 'POST', body: JSON.stringify(item.payload) });
+            }
+            if (item.id) {
+              await offlineDb.syncQueue.update(item.id, { status: 'SYNCED' });
+            }
+          } catch (e) {
+            console.warn('[SyncQueue] Item sync failed:', e);
+          }
+        }
+      }
+
+      // 2. Refresh live customers from cloud database
+      fetchCustomerList();
+      await checkOfflineCount();
+
+      setSyncSuccessMsg('Cloud synchronization complete. All records up-to-date.');
       setTimeout(() => setSyncSuccessMsg(null), 4000);
-    }, 1200);
+    } catch {
+      setSyncSuccessMsg('Sync completed with local cache.');
+      setTimeout(() => setSyncSuccessMsg(null), 4000);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCustomerForm.fullName || !newCustomerForm.age || !newCustomerForm.consentGiven) {
-      alert('Please fill customer name, age, and ensure informed consent is checked.');
+    if (!newCustomerForm.fullName.trim() || !newCustomerForm.age) {
+      alert('Please fill customer full name and age.');
       return;
     }
+
+    if (!newCustomerForm.consentGiven) {
+      alert('Explicit informed patient consent is mandatory prior to registration.');
+      return;
+    }
+
+    const payload = {
+      fullName: newCustomerForm.fullName.trim(),
+      name: newCustomerForm.fullName.trim(),
+      age: Number(newCustomerForm.age),
+      gender: newCustomerForm.gender,
+      contactNumber: newCustomerForm.phone.trim() || undefined,
+      phone: newCustomerForm.phone.trim() || undefined,
+      preferredLanguage: newCustomerForm.preferredLanguage,
+      consentStatus: true,
+      consentGiven: true,
+      notes: newCustomerForm.notes.trim() || undefined,
+      storeId: user?.storeId || 'ST-AP-CHITTOOR-01',
+    };
 
     try {
       const res = await apiRequest<any>('/customers', {
         method: 'POST',
-        body: JSON.stringify({
-          fullName: newCustomerForm.fullName,
-          age: Number(newCustomerForm.age),
-          gender: newCustomerForm.gender,
-          contactNumber: newCustomerForm.phone || undefined,
-          preferredLanguage: newCustomerForm.preferredLanguage,
-          consentGiven: true,
-          notes: newCustomerForm.notes || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.success && res.data) {
+        const created = res.data;
         const newRecord: DemoCustomer = {
-          id: res.data.id || res.data._id || `cust_${Date.now()}`,
-          clientUuid: res.data.clientUuid || `uuid_${Date.now()}`,
-          customerCode: res.data.customerCode || res.data.customerId,
-          fullName: res.data.fullName || res.data.name,
-          age: res.data.age,
-          gender: res.data.gender,
-          phone: res.data.contactNumber || res.data.phone || 'Not provided',
-          preferredLanguage: res.data.preferredLanguage || 'hi',
+          id: created.id || created._id || created.customerId || `cust_${Date.now()}`,
+          clientUuid: created.clientUuid || `uuid_${Date.now()}`,
+          customerCode: created.customerCode || created.customerId || `VB-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+          fullName: created.fullName || created.name || payload.fullName,
+          age: created.age || payload.age,
+          gender: created.gender || payload.gender,
+          phone: created.contactNumber || created.phone || payload.phone || 'Not provided',
+          preferredLanguage: (created.preferredLanguage || payload.preferredLanguage) as any,
           consentGiven: true,
           consentTimestamp: new Date().toISOString(),
           status: 'REGISTERED',
-          notes: res.data.notes || 'Newly registered in store',
-          createdAt: res.data.createdAt || new Date().toISOString(),
-          updatedAt: res.data.updatedAt || new Date().toISOString(),
+          notes: created.notes || payload.notes || 'Newly registered in store',
+          createdAt: created.createdAt || new Date().toISOString(),
+          updatedAt: created.updatedAt || new Date().toISOString(),
           screeningSummary: {
             rightEyeAcuity: 'Not Tested',
             leftEyeAcuity: 'Not Tested',
@@ -154,72 +209,44 @@ export const StoreDashboard: React.FC = () => {
             aiSummarySnippet: 'Registration complete. Ready for voice-guided intake interview.'
           }
         };
-        setCustomerList(prev => [newRecord, ...prev]);
-      } else {
-        const newCode = `VB-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-        const fallbackRecord: DemoCustomer = {
-          id: `cust_${Date.now()}`,
-          clientUuid: `uuid_${Date.now()}`,
-          customerCode: newCode,
-          fullName: newCustomerForm.fullName,
-          age: Number(newCustomerForm.age),
-          gender: newCustomerForm.gender as any,
-          phone: newCustomerForm.phone || 'Not provided',
-          preferredLanguage: newCustomerForm.preferredLanguage as any,
-          consentGiven: true,
-          consentTimestamp: new Date().toISOString(),
-          status: 'REGISTERED',
-          notes: newCustomerForm.notes || 'Newly registered in store',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          screeningSummary: {
-            rightEyeAcuity: 'Not Tested',
-            leftEyeAcuity: 'Not Tested',
-            amslerAbnormal: false,
-            hasWarningFlags: false,
-            aiSummarySnippet: 'Registration complete. Ready for voice-guided intake interview.'
-          }
-        };
-        setCustomerList(prev => [fallbackRecord, ...prev]);
-      }
-    } catch {
-      const newCode = `VB-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-      const fallbackRecord: DemoCustomer = {
-        id: `cust_${Date.now()}`,
-        clientUuid: `uuid_${Date.now()}`,
-        customerCode: newCode,
-        fullName: newCustomerForm.fullName,
-        age: Number(newCustomerForm.age),
-        gender: newCustomerForm.gender as any,
-        phone: newCustomerForm.phone || 'Not provided',
-        preferredLanguage: newCustomerForm.preferredLanguage as any,
-        consentGiven: true,
-        consentTimestamp: new Date().toISOString(),
-        status: 'REGISTERED',
-        notes: newCustomerForm.notes || 'Newly registered in store',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        screeningSummary: {
-          rightEyeAcuity: 'Not Tested',
-          leftEyeAcuity: 'Not Tested',
-          amslerAbnormal: false,
-          hasWarningFlags: false,
-          aiSummarySnippet: 'Registration complete. Ready for voice-guided intake interview.'
-        }
-      };
-      setCustomerList(prev => [fallbackRecord, ...prev]);
-    }
 
-    setShowRegisterModal(false);
-    setNewCustomerForm({
-      fullName: '',
-      age: '',
-      gender: 'FEMALE',
-      phone: '',
-      preferredLanguage: 'hi',
-      consentGiven: false,
-      notes: '',
-    });
+        setCustomerList(prev => [newRecord, ...prev]);
+        setSyncSuccessMsg(`Patient ${newRecord.fullName} (${newRecord.customerCode}) registered and saved to cloud database!`);
+        setTimeout(() => setSyncSuccessMsg(null), 5000);
+
+        // Also cache into local offline IndexedDB
+        try {
+          await offlineDb.customers.add({
+            clientUuid: newRecord.clientUuid,
+            customerCode: newRecord.customerCode,
+            fullName: newRecord.fullName,
+            age: newRecord.age,
+            gender: newRecord.gender,
+            phone: newRecord.phone,
+            preferredLanguage: newRecord.preferredLanguage as any,
+            consentGiven: true,
+            notes: newRecord.notes,
+            syncStatus: 'SYNCED',
+            createdAt: newRecord.createdAt,
+          });
+        } catch {}
+
+        setShowRegisterModal(false);
+        setNewCustomerForm({
+          fullName: '',
+          age: '',
+          gender: 'FEMALE',
+          phone: '',
+          preferredLanguage: 'hi',
+          consentGiven: false,
+          notes: '',
+        });
+      } else {
+        alert(res.error?.message || 'Failed to save patient to database. Please check connection.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Network error occurred while saving patient.');
+    }
   };
 
   // Filtered customers

@@ -45,6 +45,7 @@ export interface IEyeImage extends Document {
   };
   imageStoragePath: string;
   thumbnailStoragePath?: string;
+  imageDataFallback?: string;
   imageType: ClinicalImageType;
   eyeSide: EyeSide;
   gazeDirection?: GazeDirection;
@@ -102,6 +103,7 @@ const EyeImageSchema = new Schema<IEyeImage>(
     },
     imageStoragePath: { type: String, required: true },
     thumbnailStoragePath: { type: String },
+    imageDataFallback: { type: String },
     imageType: {
       type: String,
       enum: [

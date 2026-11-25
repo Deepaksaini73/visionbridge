@@ -20,9 +20,7 @@ const createCustomerSchema = z.object({
   contactNumber: z.string().optional(),
   phone: z.string().optional(),
   preferredLanguage: z.enum(['en', 'hi']).default('hi'),
-  consentStatus: z.boolean().refine(val => val === true, {
-    message: 'Explicit customer consent is required before performing any preliminary screening',
-  }),
+  consentStatus: z.boolean().optional(),
   consentGiven: z.boolean().optional(),
   notes: z.string().optional(),
   storeId: z.string().optional(),
@@ -30,6 +28,9 @@ const createCustomerSchema = z.object({
 }).refine(data => data.age !== undefined || data.dateOfBirth !== undefined, {
   message: 'Either age or date of birth must be provided',
   path: ['age'],
+}).refine(data => data.consentStatus === true || data.consentGiven === true, {
+  message: 'Explicit customer consent is required before performing any preliminary screening',
+  path: ['consentStatus'],
 });
 
 const updateCustomerSchema = z.object({
@@ -843,6 +844,7 @@ export const uploadProfilePhoto = async (req: AuthenticatedRequest, res: Respons
       mimeType: saved.mimeType,
       fileSizeBytes: saved.sizeBytes,
       uploadedAt: new Date(),
+      photoData: imageData,
     };
 
     customer.profilePhoto = profilePhotoData;
@@ -938,23 +940,35 @@ export const getProfilePhoto = async (req: AuthenticatedRequest, res: Response) 
       });
     }
 
-    if (!customer.profilePhoto?.storagePath || !fileExists(customer.profilePhoto.storagePath)) {
-      return res.status(404).json({
-        success: false,
-        error: { code: 'PHOTO_NOT_FOUND', message: 'No profile photo on file for this customer.' },
-      });
+    // 1. If disk file exists, read and decrypt
+    if (customer.profilePhoto?.storagePath && fileExists(customer.profilePhoto.storagePath)) {
+      const { buffer, mimeType, isEncrypted } = readStoredImageFile(
+        customer.profilePhoto.storagePath,
+        customer.profilePhoto.mimeType || 'image/jpeg'
+      );
+
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+      res.setHeader('X-Storage-Encrypted', isEncrypted ? 'AES-256-GCM' : 'NONE');
+      return res.status(200).send(buffer);
     }
 
-    // Read and decrypt the AES-256-GCM encrypted file from storage
-    const { buffer, mimeType, isEncrypted } = readStoredImageFile(
-      customer.profilePhoto.storagePath,
-      customer.profilePhoto.mimeType || 'image/jpeg'
-    );
+    // 2. Fallback to persisted database base64 photoData (e.g. for cloud deployments)
+    if (customer.profilePhoto?.photoData) {
+      const matches = customer.profilePhoto.photoData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mime = matches[1];
+        const buffer = Buffer.from(matches[2], 'base64');
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Cache-Control', 'private, max-age=3600');
+        return res.status(200).send(buffer);
+      }
+    }
 
-    res.setHeader('Content-Type', mimeType);
-    res.setHeader('Cache-Control', 'private, max-age=3600');
-    res.setHeader('X-Storage-Encrypted', isEncrypted ? 'AES-256-GCM' : 'NONE');
-    return res.status(200).send(buffer);
+    return res.status(404).json({
+      success: false,
+      error: { code: 'PHOTO_NOT_FOUND', message: 'No profile photo on file for this customer.' },
+    });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return res.status(500).json({

@@ -338,6 +338,7 @@ export const uploadEyeImage = async (req: AuthenticatedRequest, res: Response) =
         role: req.user?.role || 'STORE_OPERATOR',
       },
       imageStoragePath: saved.storagePath,
+      imageDataFallback: imageData,
       imageType: imageType as ClinicalImageType,
       eyeSide: eyeSide as EyeSide,
       gazeDirection: gazeDirection as GazeDirection,

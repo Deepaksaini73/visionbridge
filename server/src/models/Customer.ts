@@ -6,6 +6,7 @@ export interface ICustomerProfilePhoto {
   mimeType: string;
   fileSizeBytes: number;
   uploadedAt: Date;
+  photoData?: string;
 }
 
 export interface ICustomer extends Document {
@@ -62,6 +63,7 @@ const CustomerSchema = new Schema<ICustomer>(
       mimeType: { type: String },
       fileSizeBytes: { type: Number },
       uploadedAt: { type: Date },
+      photoData: { type: String },
     },
     profilePhotoUrl: { type: String },
     age: { type: Number, required: true, min: 0, max: 125 },

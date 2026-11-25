@@ -102,10 +102,40 @@ export const ClinicalEyeImageUploader: React.FC<ClinicalEyeImageUploaderProps> =
     setSelectedFile(file);
     const reader = new FileReader();
     reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      setPreviewDataUrl(dataUrl);
-      // Automatically trigger real-time EyeCapture AI quality assessment
-      runAiQualityCheck(dataUrl, file.name);
+      const rawDataUrl = e.target?.result as string;
+      // Optimize high-resolution phone captures to calibrated clinical standard (< 1MB)
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1920;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.88);
+          setPreviewDataUrl(optimizedDataUrl);
+          runAiQualityCheck(optimizedDataUrl, file.name);
+        } else {
+          setPreviewDataUrl(rawDataUrl);
+          runAiQualityCheck(rawDataUrl, file.name);
+        }
+      };
+      img.onerror = () => {
+        setPreviewDataUrl(rawDataUrl);
+        runAiQualityCheck(rawDataUrl, file.name);
+      };
+      img.src = rawDataUrl;
     };
     reader.readAsDataURL(file);
   };
