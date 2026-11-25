@@ -4,7 +4,7 @@
  * Safely resolves authentication token from localStorage and document.cookie.
  */
 
-const BASE_URL = '/api';
+const BASE_URL = ((import.meta as any).env?.VITE_API_URL as string) || '/api';
 
 export function getAuthToken(): string | null {
   try {
@@ -33,12 +33,18 @@ export function getAuthenticatedMediaUrl(url: string | undefined | null): string
   if (!url) return '';
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
 
-  const token = getAuthToken();
-  if (!token) return url;
+  let fullUrl = url;
+  if (url.startsWith('/api') && BASE_URL !== '/api' && !url.startsWith('http')) {
+    const baseHost = BASE_URL.replace(/\/api\/?$/, '');
+    fullUrl = `${baseHost}${url}`;
+  }
 
-  const separator = url.includes('?') ? '&' : '?';
-  if (url.includes('token=')) return url;
-  return `${url}${separator}token=${encodeURIComponent(token)}`;
+  const token = getAuthToken();
+  if (!token) return fullUrl;
+
+  const separator = fullUrl.includes('?') ? '&' : '?';
+  if (fullUrl.includes('token=')) return fullUrl;
+  return `${fullUrl}${separator}token=${encodeURIComponent(token)}`;
 }
 
 /**
@@ -47,9 +53,10 @@ export function getAuthenticatedMediaUrl(url: string | undefined | null): string
 export function getClinicalReportUrl(identifier: string, isCustomer: boolean = false): string {
   if (!identifier) return '';
   const token = getAuthToken();
+  const root = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL.replace(/\/$/, '')}/api`;
   const endpoint = isCustomer
-    ? `/api/customers/${encodeURIComponent(identifier)}/report`
-    : `/api/screenings/${encodeURIComponent(identifier)}/pdf`;
+    ? `${root}/customers/${encodeURIComponent(identifier)}/report`
+    : `${root}/screenings/${encodeURIComponent(identifier)}/pdf`;
   return token ? `${endpoint}?token=${encodeURIComponent(token)}` : endpoint;
 }
 

@@ -1,0 +1,64 @@
+services:
+  # 1. VisionBridge Backend API Server (Node.js + Express + MongoDB)
+  - type: web
+    name: visionbridge-backend
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm --workspace=server run build
+    startCommand: npm --workspace=server run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CLIENT_URL
+        sync: false
+      - key: AI_SERVICE_URL
+        fromService:
+          type: web
+          name: visionbridge-ai
+          property: host
+
+  # 2. VisionBridge AI Microservice (Python FastAPI + Computer Vision)
+  - type: web
+    name: visionbridge-ai
+    env: python
+    plan: free
+    region: oregon
+    rootDir: ai-service
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DEBUG
+        value: "False"
+      - key: API_KEY
+        generateValue: true
+
+  # 3. VisionBridge Frontend Web Client (React 18 + Vite SPA)
+  - type: static
+    name: visionbridge-client
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm --workspace=client run build
+    staticPublishPath: ./client/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: visionbridge-backend
+          property: host

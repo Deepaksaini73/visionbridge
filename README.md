@@ -229,6 +229,7 @@ Comprehensive milestone documentation, clinical specifications, mathematical for
 | **5.5** | [`docs/milestone-5.5-lens-corneal-clarity-report.md`](docs/milestone-5.5-lens-corneal-clarity-report.md) | Lens & Corneal Clarity: Crystalline lens opacity (Cataract WHO Grades 0–3) & Arcus Senilis lipid ring biometry |
 | **5.6** | [`docs/milestone-5.6-live-optometrist-queue-and-pdf-reporting.md`](docs/milestone-5.6-live-optometrist-queue-and-pdf-reporting.md) | Live MongoDB Optometrist Review Queue, Decision Persistence, and Comprehensive Clinical PDF Report Engine |
 | **UI Polish** | [`docs/ui-styling-enhancements-report.md`](docs/ui-styling-enhancements-report.md) | Full-spectrum styling audit: borders, dark modal scrollbars, responsive table widths, modal scroll bounds, and non-overflowing 5-engine AI toolbar |
+| **Deployment** | [`docs/cloud-deployment-guide.md`](docs/cloud-deployment-guide.md) | Cloud deployment guide for Vercel, Render, and MongoDB Atlas (Production Setup) |
 | **Architecture** | [`docs/architecture.md`](docs/architecture.md) | End-to-end multi-tenant system architecture, AES-256-GCM vault, and RBAC security |
 | **Research** | [`docs/research/eye-capture-ai-model-evaluation.md`](docs/research/eye-capture-ai-model-evaluation.md) | In-depth AI/ML model landscape evaluation for ophthalmology and tele-optometry |
 
