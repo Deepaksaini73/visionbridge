@@ -288,7 +288,7 @@ export async function validateImageWithAiService(req: Request, res: Response): P
   try {
     const cleanBase64 = imageData.replace(/^data:image\/[a-z]+;base64,/, '');
     const buffer = Buffer.from(cleanBase64, 'base64');
-    const blob = new Blob([buffer]);
+    const blob = new Blob([buffer as any]);
     const formData = new FormData();
     formData.append('file', blob, filename);
 
@@ -333,7 +333,7 @@ export async function checkEyeQuality(req: AuthenticatedRequest, res: Response):
 
   try {
     const { buffer, filename } = await resolveImageBuffer(req, parsed.data);
-    const blob = new Blob([buffer]);
+    const blob = new Blob([buffer as any]);
     const formData = new FormData();
     formData.append('file', blob, filename);
 
@@ -381,7 +381,7 @@ export async function segmentEyeAnatomy(req: AuthenticatedRequest, res: Response
 
   try {
     const { buffer, filename } = await resolveImageBuffer(req, parsed.data);
-    const blob = new Blob([buffer]);
+    const blob = new Blob([buffer as any]);
     const formData = new FormData();
     formData.append('file', blob, filename);
 
@@ -429,7 +429,7 @@ export async function analyzeEyePhotograph(req: AuthenticatedRequest, res: Respo
 
   try {
     const { buffer, filename } = await resolveImageBuffer(req, parsed.data);
-    const blob = new Blob([buffer]);
+    const blob = new Blob([buffer as any]);
     const formData = new FormData();
     formData.append('file', blob, filename);
 
@@ -505,7 +505,7 @@ export async function analyzeAdnexalAlignment(req: AuthenticatedRequest, res: Re
 
   try {
     const { buffer, filename, eyeSide } = await resolveImageBuffer(req, parsed.data);
-    const blob = new Blob([buffer]);
+    const blob = new Blob([buffer as any]);
     const formData = new FormData();
     formData.append('file', blob, filename);
 
@@ -584,7 +584,7 @@ export async function analyzeHyperaemiaAndPterygium(req: AuthenticatedRequest, r
 
   try {
     const { buffer, filename, eyeSide } = await resolveImageBuffer(req, parsed.data);
-    const blob = new Blob([buffer]);
+    const blob = new Blob([buffer as any]);
     const formData = new FormData();
     formData.append('file', blob, filename);
 
@@ -663,7 +663,7 @@ export async function analyzeRetinalPhotograph(req: AuthenticatedRequest, res: R
 
   try {
     const { buffer, filename, eyeSide } = await resolveImageBuffer(req, parsed.data);
-    const blob = new Blob([buffer]);
+    const blob = new Blob([buffer as any]);
     const formData = new FormData();
     formData.append('file', blob, filename);
 
@@ -749,7 +749,7 @@ export async function analyzeCornealLensClarity(req: AuthenticatedRequest, res: 
 
   try {
     const { buffer, filename, eyeSide } = await resolveImageBuffer(req, parsed.data);
-    const blob = new Blob([buffer]);
+    const blob = new Blob([buffer as any]);
     const formData = new FormData();
     formData.append('file', blob, filename);
 
